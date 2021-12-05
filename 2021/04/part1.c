@@ -205,11 +205,14 @@ void print_grids(struct Array *grids, struct Array *picks) {
 	}
 }
 
-void print_wins(struct Array *wins) {
+void print_wins(struct Array *wins, struct Array *picks) {
 	for (int i = 0; i < wins->length; i++) {
 		struct Victory * v = wins->items[i].pointer;
 		print_grid(v->hits);
-		printf("\n     Wins on %i\n\n\n", v->winning_turn);
+		printf("\n     Wins on %i with %i\n\n\n",
+			v->winning_turn,
+			picks->items[v->winning_turn].intval
+		);
 	}
 }
 
@@ -225,14 +228,53 @@ struct Array * winners(struct Array *grids, struct Array *picks) {
 	return wins;
 }
 
+int unpicked_total(int grid[5][5], int hits[5][5]) {
+	int total = 0;
+	for (int row = 0; row < 5; row++) {
+		for (int col = 0; col < 5; col++) {
+			if (hits[row][col] == 0) {
+				total += grid[row][col];
+			}
+		}
+	}
+	return total;
+}
+
+int first_winner(struct Array *wins) {
+	int lowest = -1;
+	int index = -1;
+	for (int i = 0; i < wins->length; i++) {
+		struct Victory *v = wins->items[i].pointer;
+		if (lowest == -1 || v->winning_turn < lowest) {
+			lowest = v->winning_turn;
+			index = i;
+		}
+	}
+	return index;
+}
+
 int main() {
 	struct Array *picks = read_picks();
 	struct Array *grids = read_grids();
 	struct Array *wins = winners(grids, picks);
 
+	int winner_index = first_winner(wins);
+	struct Victory *winning_victory = wins->items[winner_index].pointer;
+	int winning_roll = picks->items[winning_victory->winning_turn].intval;
+
+	int total = unpicked_total(
+		grids->items[winner_index].pointer,
+		winning_victory->hits
+	);
+
 	print_array(picks, int_member);
 	printf("\n");
 	print_grids(grids, picks);
 	printf("\n");
-	print_wins(wins);
+	print_wins(wins, picks);
+	printf("\n");
+	printf("winner: %i\n", winner_index);
+	printf("total: %i\n", total);
+	printf("winning roll: %i\n", winning_roll);
+	printf("score: %i\n", total * winning_roll);
 }
