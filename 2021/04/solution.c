@@ -253,18 +253,40 @@ int first_winner(struct Array *wins) {
 	return index;
 }
 
+int last_winner(struct Array *wins) {
+	int highest = -1;
+	int index = -1;
+	for (int i = 0; i < wins->length; i++) {
+		struct Victory *v = wins->items[i].pointer;
+		if (highest == -1 || v->winning_turn > highest) {
+			highest = v->winning_turn;
+			index = i;
+		}
+	}
+	return index;
+}
+
 int main() {
 	struct Array *picks = read_picks();
 	struct Array *grids = read_grids();
 	struct Array *wins = winners(grids, picks);
 
-	int winner_index = first_winner(wins);
-	struct Victory *winning_victory = wins->items[winner_index].pointer;
-	int winning_roll = picks->items[winning_victory->winning_turn].intval;
+	int l_winner_index = first_winner(wins);
+	struct Victory *l_winning_victory = wins->items[l_winner_index].pointer;
+	int l_winning_roll = picks->items[l_winning_victory->winning_turn].intval;
 
-	int total = unpicked_total(
-		grids->items[winner_index].pointer,
-		winning_victory->hits
+	int l_total = unpicked_total(
+		grids->items[l_winner_index].pointer,
+		l_winning_victory->hits
+	);
+
+	int h_winner_index = last_winner(wins);
+	struct Victory *h_winning_victory = wins->items[h_winner_index].pointer;
+	int h_winning_roll = picks->items[h_winning_victory->winning_turn].intval;
+
+	int h_total = unpicked_total(
+		grids->items[h_winner_index].pointer,
+		h_winning_victory->hits
 	);
 
 	print_array(picks, int_member);
@@ -273,8 +295,16 @@ int main() {
 	printf("\n");
 	print_wins(wins, picks);
 	printf("\n");
-	printf("winner: %i\n", winner_index);
-	printf("total: %i\n", total);
-	printf("winning roll: %i\n", winning_roll);
-	printf("score: %i\n", total * winning_roll);
+
+	printf("l winner: %i\n", l_winner_index);
+	printf("l total: %i\n", l_total);
+	printf("l winning roll: %i\n", l_winning_roll);
+	printf("l score: %i\n", l_total * l_winning_roll);
+
+	printf("\n");
+
+	printf("h winner: %i\n", h_winner_index);
+	printf("h total: %i\n", h_total);
+	printf("h winning roll: %i\n", h_winning_roll);
+	printf("h score: %i\n", h_total * h_winning_roll);
 }
