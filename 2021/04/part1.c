@@ -129,7 +129,7 @@ struct Array * read_grids() {
 	struct Array * grids = new_array();
 	char c;
 
-	for (int i = 0; i < 2; i++) {
+	while ((c = getchar()) != EOF) {
 		union ArrayMember grid = { .pointer = read_grid() };
 		array_push(grids, grid);
 	}
