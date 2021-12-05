@@ -82,16 +82,44 @@ struct Array * read_picks() {
 }
 
 int read_number() {
-	return 1;
+	int started = 0;
+	int v = 0;
+	char c;
+	for (int i = 0; i < 20; i++) {
+		c = getchar();
+
+		if (c == ' ' || c == '\n') {
+			if(started == 0) {
+			   	continue;
+			} else {
+				ungetc(c, stdin);
+				return v;
+			}
+		}
+
+		started = 1;
+		v = v * 10 + (c - 48);
+	}
+
+	printf("Number string is too long.\n");
+	exit(1);
 }
 
 int * read_grid() {
+	char c;
 	int *grid = malloc(sizeof(int[5][5]));
 
 	for (int row = 0; row < 5; row++) {
 		for (int col = 0; col < 5; col++) {
-			grid[row][col] = read_number();
+			grid[row * 5 + col] = read_number();
 		}
+
+		// consume EOL
+		c = getchar();
+		if (c != '\n') {
+			printf("Bad input. Expected newline.\n");
+			exit(1);
+		}	
 	}
 
 	return grid;
@@ -101,9 +129,9 @@ struct Array * read_grids() {
 	struct Array * grids = new_array();
 	char c;
 
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 2; i++) {
 		union ArrayMember grid = { .pointer = read_grid() };
-		array_push(grids, read_grid);
+		array_push(grids, grid);
 	}
 
 	return grids;
@@ -112,7 +140,7 @@ struct Array * read_grids() {
 void print_grid(int grid[5][5]) {
 	for (int y = 0; y < 5; y++) {
 		for (int x = 0; x < 5; x++) {
-			printf("%5i", grid[x][y]);
+			printf("%5i", grid[y][x]);
 		}
 		printf("\n");
 	}
@@ -129,5 +157,8 @@ int main() {
 	struct Array *picks = read_picks();
 	print_array(picks, int_member);
 
+	printf("\n");
+
 	struct Array *grids = read_grids();
+	print_grids(grids);
 }
