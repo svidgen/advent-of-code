@@ -137,6 +137,52 @@ struct Array * read_grids() {
 	return grids;
 }
 
+int is_winning(int hits[5][5]) {
+	int rows[5] = { 0, 0, 0, 0 };
+	int cols[5] = { 0, 0, 0, 0 };
+
+	for (int row = 0; row < 5; row++) {
+		for (int col = 0; col < 5; col++) {
+			if (hits[row][col]) {
+				rows[row] += 1;
+				cols[col] += 1;
+
+				if (rows[row] == 5 || cols[col] == 5) {
+					return 1;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+int winning_turn(int grid[5][5], struct Array *picks) {
+	int hits[5][5];
+
+	for (int row = 0; row < 5; row++) {
+		for (int col = 0; col < 5; col++) {
+			hits[row][col] = 0;
+		}
+	}
+
+	for (int turn = 0; turn < picks->length; turn++) {
+		for (int row = 0; row < 5; row++) {
+			for (int col = 0; col < 5; col++) {
+				if (grid[row][col] == picks->items[turn].intval) {
+					hits[row][col] = 1;
+				}
+			}
+		}
+
+		if (is_winning(hits)) {
+			return turn;
+		}
+	}
+
+	return -1;
+}
+
 void print_grid(int grid[5][5]) {
 	for (int y = 0; y < 5; y++) {
 		for (int x = 0; x < 5; x++) {
@@ -146,10 +192,12 @@ void print_grid(int grid[5][5]) {
 	}
 }
 
-void print_grids(struct Array *a) {
-	for (int i = 0; i < a->length; i++) {
-		print_grid(a->items[i].pointer);
-		printf("\n");
+void print_grids(struct Array *grids, struct Array *picks) {
+	for (int i = 0; i < grids->length; i++) {
+		print_grid(grids->items[i].pointer);
+		printf("\n    Wins on %i\n\n",
+			winning_turn(grids->items[i].pointer, picks)
+		);
 	}
 }
 
@@ -160,5 +208,5 @@ int main() {
 	printf("\n");
 
 	struct Array *grids = read_grids();
-	print_grids(grids);
+	print_grids(grids, picks);
 }
