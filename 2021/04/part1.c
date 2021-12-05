@@ -4,6 +4,11 @@
 #define ARRAY_INIT 128 
 #define ARRAY_INC 2
 
+struct Victory {
+	int winning_turn;
+	int hits[5][5];
+};
+
 union ArrayMember {
 	int intval;
 	void *pointer;
@@ -45,7 +50,6 @@ void array_free(struct Array *a) {
 void print_array(struct Array *a, void (*print_item)(union ArrayMember)) {
 	printf("[");
 	for (int i = 0; i < a->length; i++) {
-		// printf("%i", a->items[i]);
 		print_item(a->items[i]);
 		if (i < a->length - 1) {
 			printf(", ");
@@ -157,12 +161,13 @@ int is_winning(int hits[5][5]) {
 	return 0;
 }
 
-int winning_turn(int grid[5][5], struct Array *picks) {
-	int hits[5][5];
+struct Victory * victory(int grid[5][5], struct Array *picks) {
+	struct Victory * v = malloc(sizeof(struct Victory));
+	v->winning_turn = -1;
 
 	for (int row = 0; row < 5; row++) {
 		for (int col = 0; col < 5; col++) {
-			hits[row][col] = 0;
+			v->hits[row][col] = 0;
 		}
 	}
 
@@ -170,17 +175,18 @@ int winning_turn(int grid[5][5], struct Array *picks) {
 		for (int row = 0; row < 5; row++) {
 			for (int col = 0; col < 5; col++) {
 				if (grid[row][col] == picks->items[turn].intval) {
-					hits[row][col] = 1;
+					v->hits[row][col] = 1;
 				}
 			}
 		}
 
-		if (is_winning(hits)) {
-			return turn;
+		if (is_winning(v->hits)) {
+			v->winning_turn = turn;
+			return v;
 		}
 	}
 
-	return -1;
+	return v;
 }
 
 void print_grid(int grid[5][5]) {
@@ -195,18 +201,38 @@ void print_grid(int grid[5][5]) {
 void print_grids(struct Array *grids, struct Array *picks) {
 	for (int i = 0; i < grids->length; i++) {
 		print_grid(grids->items[i].pointer);
-		printf("\n    Wins on %i\n\n",
-			winning_turn(grids->items[i].pointer, picks)
-		);
+		printf("\n");
 	}
+}
+
+void print_wins(struct Array *wins) {
+	for (int i = 0; i < wins->length; i++) {
+		struct Victory * v = wins->items[i].pointer;
+		print_grid(v->hits);
+		printf("\n     Wins on %i\n\n\n", v->winning_turn);
+	}
+}
+
+struct Array * winners(struct Array *grids, struct Array *picks) {
+	struct Array *wins = new_array();
+
+	for (int i = 0; i < grids->length; i++) {
+		struct Victory * v = victory(grids->items[i].pointer, picks);
+		union ArrayMember item = { .pointer = v };
+		array_push(wins, item);
+	}
+
+	return wins;
 }
 
 int main() {
 	struct Array *picks = read_picks();
-	print_array(picks, int_member);
-
-	printf("\n");
-
 	struct Array *grids = read_grids();
+	struct Array *wins = winners(grids, picks);
+
+	print_array(picks, int_member);
+	printf("\n");
 	print_grids(grids, picks);
+	printf("\n");
+	print_wins(wins);
 }
