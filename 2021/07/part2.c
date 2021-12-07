@@ -93,6 +93,46 @@ int cmp_ints(const void * elem1, const void * elem2) {
 	return 0;
 }
 
+int steps_cost(int steps) {
+	int cost = 0;
+	for (int i = 1; i <= steps; i++) {
+		cost += i;
+	}
+	return cost;
+}
+
+int min(int a, int b) {
+	return a <= b ? a : b;
+}
+
+int max(int a, int b) {
+	return a >= b ? a : b;
+}
+
+int array_min(IntArray * positions) {
+	int m = positions->items[0];
+	for (int i = 1; i < positions->length; i++) {
+		m = min(m, positions->items[i]);
+	}
+	return m;
+}
+
+int array_max(IntArray * positions) {
+	int m = positions->items[0];
+	for (int i = 1; i < positions->length; i++) {
+		m = max(m, positions->items[i]);
+	}
+	return m;
+}
+
+int total_cost(IntArray * positions, int target) {
+	int total = 0;
+	for (int i = 0; i < positions->length; i++) {
+		total += steps_cost(abs(positions->items[i] - target));
+	}
+	return total;
+}
+
 int main() {
 	IntArray * positions = new_array();
 
@@ -100,16 +140,19 @@ int main() {
 		array_push(positions, read_number());
 	}
 
-	qsort(positions->items, positions->length, sizeof(int), cmp_ints);
-	int target_index = (int)round((float)(positions->length)/(float)2);
-	int target = positions->items[target_index];
-	int steps = 0;
+	int fuel = 0;
+	int target = 0;
 
-	for (int i = 0; i < positions->length; i++) {
-		steps += abs(positions->items[i] - target);
+	int MIN = array_min(positions);
+	int MAX = array_max(positions);
+
+	for (int i  = MIN; i < MAX; i++) {
+		target = positions->items[i];
+		int potential_cost = total_cost(positions, i);
+		fuel = i == 0 ? potential_cost : min(fuel, potential_cost);
 	}
 
+	printf("FINAL\n");
 	printf("target: %i\n", target);
-	printf("steps :  %i\n", steps);
-
+	printf("fuel  :  %i\n", fuel);
 }
