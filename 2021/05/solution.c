@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define ARRAY_INIT 128
 #define ARRAY_INC 2
@@ -165,49 +166,8 @@ int max(int a, int b) {
 	}
 }
 
-int is_intersection_hv(Line * h, Line * v) {
-	int h_contains_vx = (
-		(v->a.x >= min(h->a.x, h->b.x))
-			&&
-		(v->a.x <= max(h->a.x, h->b.x))
-	);
-
-	int v_contains_hy = (
-		(h->a.y >= min(v->a.y, v->b.y))
-			&&
-		(h->a.y <= max(v->a.y, v->b.y))
-	);
-
-	return h_contains_vx && v_contains_hy;
-}
-
-int is_intersection(Line * a, Line * b) {
-	if (is_vertical(a) && !is_vertical(b)) {
-		return is_intersection_hv(b, a);
-	} else if (is_vertical(b) && !is_vertical(a)) {
-		return is_intersection_hv(a, b);
-	} else {
-		return 0;
-	}
-}
-
 int is_hv(Line * line) {
 	return is_vertical(line) || is_horizontal;
-}
-
-int count_intersections(struct Array * lines, int hv) {
-	int count = 0;
-	for (int i = 0; i < lines->length; i++) {
-		Line * a = lines->items[i];
-		if (!hv || is_hv(a)) {
-			for (int j = i + 1; j < lines->length; j++) {
-				printf("comparing ...");
-				Line * b = lines->items[j];
-				if ((!hv || is_hv(b)) && is_intersection(a, b)) count++;
-			}
-		}
-	}
-	return count;
 }
 
 void paint_line(Grid * grid, Line * l) {
@@ -220,14 +180,29 @@ void paint_line(Grid * grid, Line * l) {
 			(*grid)[x][l->a.y] += 1;
 		}
 	} else {
-		// nothing for now
+		// assume 45 degrees for part 2
+		int x_step = l->b.x > l->a.x ? 1 : -1;
+		int y_step = l->b.y > l->a.y ? 1 : -1;
+
+		int x = l->a.x;
+		int y = l->a.y;
+		int steps = max(l->a.x, l->b.x) - min(l->a.x, l->b.x);
+
+		while(steps >= 0) {
+			(*grid)[x][y] += 1;
+			x += x_step;
+			y += y_step;
+			steps--;
+		}
 	}
 }
 
-void paint_lines(Grid * grid, struct Array * lines) {
+void paint_lines(Grid * grid, struct Array * lines, int hv_only) {
 	for (int i = 0; i < lines->length; i++) {
 		Line * line = lines->items[i];
-		paint_line(grid, line);
+		if (!hv_only || is_hv(line)) {
+			paint_line(grid, line);
+		}
 	}
 }
 
@@ -251,11 +226,16 @@ void print_grid(Grid * grid) {
 }
 
 int main() {
+	int hv_only = 0;
 	struct Array * lines = read_lines();
 	Grid * grid = (Grid*)new_grid();
 
 	print_lines(lines);
-	paint_lines(grid, lines);
-	printf("intersections: %i", count_intersects(grid));
+	paint_lines(grid, lines, hv_only);
 
+	if (GRID_SIZE <= 20) {
+		print_grid(grid);
+	}
+
+	printf("intersections: %i", count_intersects(grid));
 }
