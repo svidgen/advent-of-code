@@ -9,6 +9,10 @@
 #define INPUT_TOKENS 10
 #define OUTPUT_TOKENS 4
 
+// it would have probably been fun to auto-generate these based on a
+// default known arrangement. but, it literally took 2 minutes or less
+// to just hand-generate them. So, here they are:
+
 int FINGERPRINTS[] = {
 	2336, // 0
 	2222, // 1
