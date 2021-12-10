@@ -14,4 +14,7 @@ int main() {
 	printf("array 0: %i\n", a->items[0]);
 	printf("array 1: %i\n", a->items[1]);
 	printf("array 2: %i\n", a->items[2]);
+
+	String * s = new_string("abc");
+	printf("string: %s\n", s->items);
 }
