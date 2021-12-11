@@ -1,20 +1,21 @@
 #include <stdio.h>
-
 #include "../common/util.c"
 
-define_array(int)
+// -1 = incomplete
+//  0 = valid
+// >0 = invalid
+int check_line(String * line) {
+	return 0;
+}
 
 int main() {
-	array(int) * a = new_array(int);
+	array(String) * lines = split(read_all(), '\n');
 
-	array_push(int)(a, 1);
-	array_push(int)(a, 2);
-	array_push(int)(a, 3);
-
-	printf("array 0: %i\n", a->items[0]);
-	printf("array 1: %i\n", a->items[1]);
-	printf("array 2: %i\n", a->items[2]);
-
-	String * s = new_string("abc");
-	printf("string: %s\n", s->items);
+	printf("Scoring: \n");
+	int total = 0;
+	for (int i = 0; i < lines->length; i++) {
+		String line = lines->items[i];
+		int score = check_line(&line);
+		printf("%-70s => %i\n", line.items, score);
+	}
 }
