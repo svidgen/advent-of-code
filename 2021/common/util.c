@@ -12,6 +12,7 @@
 		int length; \
 		int max; \
 		int (*push)(struct Array_of_ ## T * a, T item); \
+		T (*pop)(struct Array_of_ ## T * a); \
 		T *items; \
 	} Array_of_ ## T; \
 	int array_push_ ## T (Array_of_ ## T * a, T item) { \
@@ -26,11 +27,17 @@
 		a->length++; \
 		return a->length; \
 	} \
+	T array_pop_ ## T (Array_of_ ## T * a) { \
+		T item = a->items[a->length - 1]; \
+		a->length--; \
+		return item; \
+	} \
 	Array_of_ ## T * new_array_ ## T () { \
 		Array_of_ ## T * arr = malloc(sizeof(Array_of_ ## T)); \
 		arr->length = 0; \
 		arr->max = ARRAY_INIT_SIZE; \
 		arr->push = array_push_ ## T; \
+		arr->pop = array_pop_ ## T; \
 		arr->items = malloc(sizeof(T) * ARRAY_INIT_SIZE); \
 		return arr; \
 	} \
@@ -51,6 +58,7 @@
 #define new_array(T) new_array_ ## T()
 #define array_init(T) new_array_init_ ## T
 #define array_push(T) array_push_ ## T
+#define array_pop(T) array_pop_ ## T
 
 define_array(char)
 
