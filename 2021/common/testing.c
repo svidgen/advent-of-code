@@ -56,4 +56,8 @@ int main() {
 	if (d->has(d, "BLT") == 0) {
 		printf("d->has(BLT) = false (as expected)\n");
 	}
+
+	d->free(d);
+
+	printf("dict freed?\n");
 }

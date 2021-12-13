@@ -15,8 +15,10 @@
 		int max; \
 		int (*push)(struct Array_of_ ## T * a, T item); \
 		T (*pop)(struct Array_of_ ## T * a); \
+		void (*free)(struct Array_of_ ## T * a); \
 		T *items; \
 	} Array_of_ ## T; \
+	void array_free_ ## T (Array_of_ ## T * a); \
 	int array_push_ ## T (Array_of_ ## T * a, T item) { \
 		int resize = 0; \
 		if (a->length == a->max - 1) { \
@@ -40,6 +42,7 @@
 		arr->max = ARRAY_INIT_SIZE; \
 		arr->push = array_push_ ## T; \
 		arr->pop = array_pop_ ## T; \
+		arr->free = array_free_ ## T; \
 		arr->items = malloc(sizeof(T) * ARRAY_INIT_SIZE); \
 		return arr; \
 	} \
@@ -100,11 +103,13 @@ array(String) * split(String * text, char delimiter) {
 		void (*set)(struct Dict_of_ ## T * d, char key[], T item); \
 		T (*get)(struct Dict_of_ ## T * d, char key[]); \
 		int (*has)(struct Dict_of_ ## T * d, char key[]); \
+		void (*free)(struct Dict_of_ ## T * d); \
 	} Dict_of_ ## T; \
 	\
 	void dict_set_ ## T (struct Dict_of_ ## T * d, char key[], T item); \
 	T dict_get_ ## T (struct Dict_of_ ## T * d, char key[]); \
 	int dict_has_ ## T (struct Dict_of_ ## T * d, char key[]); \
+	void dict_free_ ## T (struct Dict_of_ ## T * d); \
 	\
 	Dict_of_ ## T * new_dict_ ## T () { \
 		Dict_of_ ## T * d = malloc(sizeof(Dict_of_ ## T)); \
@@ -115,6 +120,7 @@ array(String) * split(String * text, char delimiter) {
 		d->set = dict_set_ ## T; \
 		d->get = dict_get_ ## T; \
 		d->has = dict_has_ ## T; \
+		d->free = dict_free_ ## T; \
 		return d; \
 	} \
 	\
@@ -144,6 +150,16 @@ array(String) * split(String * text, char delimiter) {
 			return 0; \
 		} else { \
 			return dict_has_ ## T(d->bucket[key[0]], key + 1); \
+		} \
+	} \
+	\
+	void dict_free_ ## T (Dict_of_ ## T * d) { \
+		if (d->value != NULL) free(d->value); \
+		for (int i = 0; i < 256; i++) { \
+			if (d->bucket[i] != NULL) { \
+				d->free(d->bucket[i]); \
+				free(d->bucket[i]); \
+			} \
 		} \
 	}
 
