@@ -94,6 +94,18 @@ array(String) * split(String * text, char delimiter) {
 		}
 	}
 
+	lines->push(lines, *line);
+	return lines;
+}
+
+array(String) * remove_empty(array(String) * raw) {
+	array(String) * lines = new_array(String);
+	for (int i = 0; i < raw->length; i++) {
+		String line = raw->items[i];
+		if (line.length > 0) {
+			lines->push(lines, line);
+		}
+	}
 	return lines;
 }
 
@@ -166,5 +178,76 @@ array(String) * split(String * text, char delimiter) {
 
 #define new_dict(T) new_dict_ ## T()
 #define dict(T) Dict_of_ ## T
+
+
+#define define_map(T) typedef struct Map_of_ ## T { \
+		array(T) * value; \
+		struct Map_of_ ## T * bucket[256]; \
+		void (*set)(struct Map_of_ ## T * d, char key[], T item); \
+		array(T) * (*get)(struct Map_of_ ## T * d, char key[]); \
+		int (*has)(struct Map_of_ ## T * d, char key[]); \
+		void (*free)(struct Map_of_ ## T * d); \
+	} Map_of_ ## T; \
+	\
+	void map_set_ ## T (struct Map_of_ ## T * d, char key[], T item); \
+	array(T) * map_get_ ## T (struct Map_of_ ## T * d, char key[]); \
+	int map_has_ ## T (struct Map_of_ ## T * d, char key[]); \
+	void map_free_ ## T (struct Map_of_ ## T * d); \
+	\
+	Map_of_ ## T * new_map_ ## T () { \
+		Map_of_ ## T * d = malloc(sizeof(Map_of_ ## T)); \
+		for (int i = 0; i < 256; i++) { \
+			d->bucket[i] = NULL; \
+		} \
+		d->value = new_array(T); \
+		d->set = map_set_ ## T; \
+		d->get = map_get_ ## T; \
+		d->has = map_has_ ## T; \
+		d->free = map_free_ ## T; \
+		return d; \
+	} \
+	\
+	void map_set_ ## T (Map_of_ ## T * d, char key[], T item) { \
+		if (strlen(key) == 0) {\
+			d->value->push(d->value, item); \
+		} else { \
+			if (d->bucket[key[0]] == NULL) { \
+				d->bucket[key[0]] = new_map(T); \
+			} \
+			map_set_ ## T(d->bucket[key[0]], key + 1, item); \
+		} \
+	} \
+	\
+	array(T) * map_get_ ## T (Map_of_ ## T * d, char key[]) { \
+		if (strlen(key) == 0) { \
+			return d->value; \
+		} else { \
+			return map_get_ ## T(d->bucket[key[0]], key + 1); \
+		} \
+	} \
+	\
+	int map_has_ ## T (Map_of_ ## T * d, char key[]) { \
+		if (strlen(key) == 0) { \
+			return d->value != NULL && d->value->length > 0 ? 1 : 0; \
+		} else if (d->bucket[key[0]] == NULL) { \
+			return 0; \
+		} else { \
+			return map_has_ ## T(d->bucket[key[0]], key + 1); \
+		} \
+	} \
+	\
+	void map_free_ ## T (Map_of_ ## T * d) { \
+		if (d->value != NULL) d->value->free(d->value); \
+		for (int i = 0; i < 256; i++) { \
+			if (d->bucket[i] != NULL) { \
+				d->free(d->bucket[i]); \
+				free(d->bucket[i]); \
+			} \
+		} \
+	}
+
+
+#define new_map(T) new_map_ ## T()
+#define map(T) Map_of_ ## T
 
 
