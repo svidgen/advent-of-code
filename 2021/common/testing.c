@@ -1,8 +1,9 @@
 #include <stdio.h>
 
-#include "../common/util.c"
+#include "./util.c"
 
 define_array(int)
+define_dict(int)
 
 int main() {
 	array(int) * a = new_array(int);
@@ -32,4 +33,23 @@ int main() {
 	s->push(s, 'd');
 
 	printf("string: %s\n", s->items);
+
+	//
+	// dict test
+	//
+	
+	dict(int) * d = new_dict(int);
+	d->set(d, "abc", 1);
+	d->set(d, "xyz", 2);
+	d->set(d, "lmnop", 3);
+	d->set(d, "bazooka joe", 4);
+
+	printf("d[abc] = %i\n", *(d->get(d, "abc")));
+	printf("d[xyz] = %i\n", *(d->get(d, "xyz")));
+	printf("d[lmnop] = %i\n", *(d->get(d, "lmnop")));
+	printf("d[bazooka] = %i\n", *(d->get(d, "bazooka joe")));
+
+	if (d->get(d, "BLT") == NULL) {
+		printf("d[BLT] = NULL (as expected)\n");
+	}
 }

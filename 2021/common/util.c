@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #define min(A, B) ((A) < (B) ? (A) : (B))
 #define max(A, B) ((A) > (B) ? (A) : (B))
@@ -92,3 +93,52 @@ array(String) * split(String * text, char delimiter) {
 
 	return lines;
 }
+
+#define define_dict(T) typedef struct Dict_of_ ## T { \
+		T * value; \
+		struct Dict_of_ ## T * bucket[256]; \
+		T* (*set)(struct Dict_of_ ## T * d, char key[], T item); \
+		T* (*get)(struct Dict_of_ ## T * d, char key[]); \
+	} Dict_of_ ## T; \
+	\
+	T * dict_set_ ## T (struct Dict_of_ ## T * d, char key[], T item); \
+	T * dict_get_ ## T (struct Dict_of_ ## T * d, char key[]); \
+	\
+	Dict_of_ ## T * new_dict_ ## T () { \
+		Dict_of_ ## T * d = malloc(sizeof(Dict_of_ ## T)); \
+		for (int i = 0; i < 256; i++) { \
+			d->bucket[i] = NULL; \
+		} \
+		d->value = NULL; \
+		d->set = dict_set_ ## T; \
+		d->get = dict_get_ ## T; \
+		return d; \
+	} \
+	\
+	T * dict_set_ ## T (Dict_of_ ## T * d, char key[], T item) { \
+		if (strlen(key) == 0) {\
+			T * replaced_value = d->value; \
+			d->value = malloc(sizeof(T)); \
+			*(d->value) = item; \
+			return replaced_value; \
+		} else { \
+			if (d->bucket[key[0]] == NULL) { \
+				d->bucket[key[0]] = new_dict(T); \
+			} \
+			return dict_set_ ## T(d->bucket[key[0]], key + 1, item); \
+		} \
+	} \
+	\
+	T * dict_get_ ## T (Dict_of_ ## T * d, char key[]) { \
+		if (strlen(key) == 0 || d->bucket[key[0]] == NULL) { \
+			return d->value; \
+		} else { \
+			return dict_get_ ## T(d->bucket[key[0]], key + 1); \
+		} \
+	}
+
+
+#define new_dict(T) new_dict_ ## T()
+#define dict(T) Dict_of_ ## T
+
+
