@@ -44,12 +44,16 @@ int main() {
 	d->set(d, "lmnop", 3);
 	d->set(d, "bazooka joe", 4);
 
-	printf("d[abc] = %i\n", *(d->get(d, "abc")));
-	printf("d[xyz] = %i\n", *(d->get(d, "xyz")));
-	printf("d[lmnop] = %i\n", *(d->get(d, "lmnop")));
-	printf("d[bazooka] = %i\n", *(d->get(d, "bazooka joe")));
+	printf("d[abc] = %i\n", d->get(d, "abc"));
+	printf("d[xyz] = %i\n", d->get(d, "xyz"));
+	printf("d[lmnop] = %i\n", d->get(d, "lmnop"));
+	printf("d[bazooka] = %i\n", d->get(d, "bazooka joe"));
 
-	if (d->get(d, "BLT") == NULL) {
-		printf("d[BLT] = NULL (as expected)\n");
+	if (d->has(d, "abc")) {
+		printf("d->has(abc) = true\n");
+	}
+
+	if (d->has(d, "BLT") == 0) {
+		printf("d->has(BLT) = false (as expected)\n");
 	}
 }
