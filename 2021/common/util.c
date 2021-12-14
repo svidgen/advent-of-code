@@ -109,6 +109,52 @@ array(String) * remove_empty(array(String) * raw) {
 	return lines;
 }
 
+int string_matches_at(String * needle, String * haystack, int index) {
+	if ((index + needle->length) >= haystack->length) return 0;
+	for (int i = 0; i < needle->length; i++) {
+		if (needle->items[i] != haystack->items[i + index]) return 0;
+	}
+	return 1;
+}
+
+int strings_equal(String * a, String * b) {
+	if (a->length != b->length) return 0;
+	for (int i = 0; i < a->length; i++) {
+		if (a->items[i] != b->items[i]) return 0;
+	}
+	return 1;
+}
+
+int string_starts_with(String * needle, String * haystack) {
+	return string_matches_at(needle, haystack, 0);
+}
+
+int string_index_of(String * needle, String * haystack) {
+	for (int i = 0; i < (haystack->length - needle->length); i++) {
+		if (string_matches_at(needle, haystack, i)) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+String * substring(String * s, int index, int length) {
+	String * new_string = new_string("");
+	int max_i = length < 0 ? s->length : min(index + length, s->length);
+	for (int i = index; i < max_i; i++) {
+		new_string->push(new_string, s->items[i]);
+	}
+	return new_string;
+}
+
+char * chars(String * s) {
+	char * c = malloc(sizeof(char) * s->length + 1);
+	for (int i = 0; i < s->length; i++) {
+		c[i] = s->items[i];
+	}
+	return c;
+}
+
 #define define_dict(T) typedef struct Dict_of_ ## T { \
 		T * value; \
 		struct Dict_of_ ## T * bucket[256]; \
