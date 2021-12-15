@@ -18,40 +18,70 @@ function repr(coord) {
 	return `${coord.x},${coord.y}`;
 }
 
-function add_node(grid, node, q, base_cost) {
+function is_on_grid(grid, node) {
 	if (
 		node.x < 0
 		|| node.y < 0
 		|| node.x > (grid[0].length - 1)
 		|| node.y > (grid.length - 1)
 	) {
-		return;
+		return false;
+	} else {
+		return true;
 	}
+}
+
+function enqueue(grid, node, q, index, base_cost) {
+	if (!is_on_grid(grid, node)) return;
 
 	node.cost = base_cost + Number(grid[node.y][node.x]);
 
-	for (let i = 0; i < q.length; i++) {
-		if (q[i].x == node.x && q[i].y == node.y) {
-			if (node.cost < q[i].cost) {
-				q[i] = node;
-			}
-			return;
-		} 
-	}
+	const existing = index[repr(node)];
+	if (existing) {
+		if (node.cost < existing.cost) {
+			// add new node
+			index[repr(node)] = node;
+			q[node.cost] = q[node.cost] || [];
+			q[node.cost].push(node);
 
-	q.push(node);
+			// remove old node
+			const bucket = q[existing.cost];
+			for (let i = 0; i < bucket.length; i++) {
+				if (bucket[i].x == existing.x && bucket[i].y == existing.y) {
+					bucket.splice(i, 1);
+					return;
+				}
+			}
+		}
+	} else {
+		index[repr(node)] = node;
+		q[node.cost] = q[node.cost] || [];
+		q[node.cost].push(node);
+	}
+}
+
+function dequeue(q) {
+	for (let i = 0; i < q.length; i++) {
+		if (q[i] && q[i].length > 0) {
+			return q[i].shift();
+		}
+	}
+	return;
 }
 
 function search(grid, start, end) {
 	// starting position isn't "entered", so cost isn't counted.
 	start.cost = 0; // Number(grid[start.y][start.x]);
 
-	const queue = [start];
+	const queue = [];
+	const index = {};
+	enqueue(grid, start, queue, index, 0);
 
 	let limit = 10_000_000;
-	while (queue.length > 0 && limit > 0) {
+	while (limit > 0) {
 		limit--;
-		const current = queue.shift();
+		current = dequeue(queue);
+
 		if (current.x == end.x && current.y == end.y) {
 			return current.cost;
 		}
@@ -62,15 +92,15 @@ function search(grid, start, end) {
 			{x: current.x, y: current.y - 1},
 			{x: current.x, y: current.y + 1}
 		]) {
-			add_node(grid, node, queue, current.cost);
+			enqueue(grid, node, queue, index, current.cost);
 		}
-
-		queue.sort((a,b) => a.cost > b.cost ? 1 : (a.cost < b.cost ? -1 : 0));
 	}
 
 	console.log('did not complete');
 	console.log(queue);
 }
 
-console.log(search(GRID, {x: 0, y: 0}, {x: GRID[0].length - 1, y: GRID.length - 1}));
+let result = search(GRID, {x: 0, y: 0}, {x: GRID[0].length - 1, y: GRID.length - 1});
+console.log(result - Number(GRID[0][0]));
+
 // console.log(search(GRID, {x: 0, y: 0}, {x: 5, y: 5}));
