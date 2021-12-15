@@ -14,6 +14,22 @@ const GRID = input
 		return rows;
 	}, []);
 
+const BIG_GRID = [];
+for (let copy_y = 0; copy_y < 5; copy_y++) {
+	for (let copy_x = 0; copy_x < 5; copy_x++) {
+		GRID.forEach((row, index) => {
+			const target_y = index * copy_y;
+			BIG_GRID[target_y] = [];
+			for (let source_x = 0; source_x < row.length; source_x++) {
+				const target_x = source_x + (copy_x * row.width);
+				BIG_GRID[target_y][target_x] = (copy_y + copy_x + row[source_x]) % 9;
+			}
+		});
+	}
+}
+
+console.log(BIG_GRID);
+
 function repr(coord) {
 	return `${coord.x},${coord.y}`;
 }
@@ -102,5 +118,8 @@ function search(grid, start, end) {
 
 let result = search(GRID, {x: 0, y: 0}, {x: GRID[0].length - 1, y: GRID.length - 1});
 console.log(result - Number(GRID[0][0]));
+
+result = search(BIG_GRID, {x: 0, y: 0}, {x: BIG_GRID[0].length - 1, y: BIG_GRID.length - 1});
+console.log(result - Number(BIG_GRID[0][0]));
 
 // console.log(search(GRID, {x: 0, y: 0}, {x: 5, y: 5}));
