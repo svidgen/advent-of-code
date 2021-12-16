@@ -18,17 +18,18 @@ const BIG_GRID = [];
 for (let copy_y = 0; copy_y < 5; copy_y++) {
 	for (let copy_x = 0; copy_x < 5; copy_x++) {
 		GRID.forEach((row, index) => {
-			const target_y = index * copy_y;
-			BIG_GRID[target_y] = [];
+			const target_y = index + (copy_y * GRID.length);
+			BIG_GRID[target_y] = BIG_GRID[target_y] || [];
 			for (let source_x = 0; source_x < row.length; source_x++) {
-				const target_x = source_x + (copy_x * row.width);
-				BIG_GRID[target_y][target_x] = (copy_y + copy_x + row[source_x]) % 9;
+				const target_x = source_x + (copy_x * row.length);
+				const new_value = copy_y + copy_x + Number(row[source_x]);
+				BIG_GRID[target_y][target_x] = new_value > 9 ? new_value - 9 : new_value;
 			}
 		});
 	}
 }
 
-console.log(BIG_GRID);
+console.log(BIG_GRID.map(l => l.join(",")).join("\n"));
 
 function repr(coord) {
 	return `${coord.x},${coord.y}`;
