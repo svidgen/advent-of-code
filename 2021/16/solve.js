@@ -4,7 +4,15 @@ const input = fs.readFileSync(0, 'utf-8');
 const lines = input.split("\n");
 
 
+const TYPE_SUM = 0;
+const TYPE_PRODUCT = 1;
+const TYPE_MIN = 2;
+const TYPE_MAX = 3;
 const TYPE_LITERAL = 4;
+const TYPE_GT = 5;
+const TYPE_LT = 6;
+const TYPE_EQ = 7;
+
 const LENGTH_FLAG_PACKETS = 1;
 const LENGTH_FLAG_BITS = 0;
 
@@ -103,15 +111,55 @@ function parse(line) {
 	return [...packets(bits_of(line))];
 }
 
-function part1(BITS) {
-	let score = 0;
+function score(BITS) {
+	let s = 0;
 	for (const v of BITS) {
-		score += v.version + part1(v.children || []);
+		s += v.version + score(v.children || []);
 	}
-	return score;
+	return s;
+}
+
+function evaluate(code) {
+	const outputs = [];
+	for (const op of code) {
+		let a, b;
+		switch(op.type) {
+			case TYPE_SUM:
+				outputs.push(evaluate(op.children).reduce((s,v) => s += v, 0));
+				break;
+			case TYPE_PRODUCT:
+				outputs.push(evaluate(op.children).reduce((s,v) => s *= v, 1));
+				break;
+			case TYPE_MAX:
+				outputs.push(Math.max(...evaluate(op.children)));
+				break;
+			case TYPE_MIN:
+				outputs.push(Math.min(...evaluate(op.children)));
+				break;
+			case TYPE_LITERAL:
+				outputs.push(op.value);
+				break;
+			case TYPE_GT:
+				[a, b] = evaluate(op.children);
+				outputs.push(a > b ? 1 : 0);
+				break;
+			case TYPE_LT:
+				[a, b] = evaluate(op.children);
+				outputs.push(a < b ? 1 : 0);
+				break;
+			case TYPE_EQ:
+				[a, b] = evaluate(op.children);
+				outputs.push(a === b ? 1 : 0);
+				break;
+			default:
+				break;
+		}
+	}
+	return outputs;
 }
 
 for (const line of lines) {
 	// console.log(JSON.stringify(parse(line), null, 2));
-	console.log('score', line, part1(parse(line)));
+	const program = parse(line);
+	console.log('score', line, score(program), evaluate(program));
 }
