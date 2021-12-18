@@ -11,11 +11,16 @@ const data = {
 
 function distance(v, steps) {
 	const j = v - steps + 1;
+
+	// closed-form summation.
 	return ( (v + j) * ( v - j + 1 ) ) / 2;
 }
 
 function peak(v, steps) {
+	// negative velocity's peak is always zero
 	if (v < 0) return 0;
+
+	// else, it's just the summation from 0..V (after which is starts descending)
 	let j = Math.max(0, v - steps + 1);
 	return ( (v + j) * (v - j + 1) ) / 2;
 }
@@ -49,8 +54,11 @@ function join(idx_x, idx_y) {
 
 function hits_between_x(a, b) {
 	const hits = [];
-	for (const velocity of range(0, 400)) {
-		for (const steps of range(0, 1200)) {
+
+	// TODO: already quite fast. but it's "squishy" ...
+	// it should ideally choose steps max based on vertical params as data.
+	for (const velocity of range(0, b)) {
+		for (const steps of range(0, 200)) {
 			const d = distance(velocity, Math.min(steps, velocity));
 			if (d >= a && d <= b) {
 				index(hits, {velocity, steps, distance: d});
@@ -63,8 +71,11 @@ function hits_between_x(a, b) {
 
 function hits_between_y(a, b) {
 	const hits = [];
-	for (const velocity of range(-200, 400)) {
-		for (const steps of range(0, 1200)) {
+
+	// TODO: already quite fast. but could be more precise ... i'm actually not
+	// 100% sure |2*a| is a reasonable max. but, it ... *seems* like it on a whiteboard?
+	for (const velocity of range(a, Math.abs(2 * a))) {
+		for (const steps of range(0, Math.abs(2 * a))) {
 			const d = distance(velocity, steps);
 			if (d >= a && d <= b) {
 				index(hits, {velocity, steps, distance: d});
