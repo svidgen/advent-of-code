@@ -2,6 +2,7 @@ const { EACCES } = require("constants");
 
 const equations = [
 	// should yield: 1, 2, 3
+	// [2, 3, 4, 20],
 	[0, 3, 4, 18],
 	[3, 2, 5, 22],
 	[5, 1, 2, 13]
@@ -40,18 +41,23 @@ function validate(matrix, solution) {
 	}
 }
 
-function canonicalize(matrix) {
-	for (let col of )
+function sorted_matrix(matrix) {
+	const m = deepcopy(matrix);
+	const value = row => row.reduce((v, c) => (v << 1) + (c ? 1 : 0), 0);
+	m.sort((a,b) => value(a) > value(b) ? 1 : value(a) < value(b) ? -1 : 0).reverse();
+	return m;
 }
 
 function solve(matrix) {
-	const m = deepcopy(matrix);
+	print(matrix);
+	const m = sorted_matrix(matrix);
+	const VARS = m[0].length - 1;
 	print(m);
-	for (let col = 0; col < m.length - 1; col++) {
-		for (let row = 0; row < m.length - 1; row++) {
+	for (let col = 0; col < VARS; col++) {
+		for (let row = 0; row < VARS; row++) {
 			if (row === col) continue;
 			const ratio = m[row][col] / m[col][col];
-			for (let rowcol = 0; rowcol < m.length; rowcol++) {
+			for (let rowcol = 0; rowcol <= VARS; rowcol++) {
 				m[row][rowcol] = m[row][rowcol] - ratio * m[col][rowcol];
 			}
 			print(m);
