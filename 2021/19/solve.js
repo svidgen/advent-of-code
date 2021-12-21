@@ -2,6 +2,8 @@ const fs = require('fs');
 const { off } = require('process');
 const util = require('util');
 
+const DEBUG = true;
+
 const scanners = fs.readFileSync(0, 'utf-8')
 	.split(/--- scanner \d+ ---/g)
 	.filter(blob => blob)
@@ -14,23 +16,49 @@ const scanners = fs.readFileSync(0, 'utf-8')
 				.map(s => s.split(',').map(v => parseInt(v))),
 			features: {},
 			orientations: [],
-			index: {}
 		};
 	})
 ;
+
+function repeat(times, s) {
+	const a = [];
+	for (let i = 0; i < times; i++) {
+		a.push(s);
+	}
+	return a.join('');
+}
 
 function deepcopy(o) {
 	return JSON.parse(JSON.stringify(o));
 }
 
-function print(o) {
-	console.log(util.inspect(o, {
+function log(s) {
+	DEBUG && console.log(s);
+}
+
+function banner(s, always = false) {
+	if (!(DEBUG || always)) return;
+	const CHAR = '#';
+	const WIDTH = 60;
+	const _s = s.substring(0, WIDTH - 4);
+	const pad = repeat(WIDTH - _s.length - 4, ' ');
+	console.log();
+	console.log(repeat(WIDTH, CHAR));
+	console.log(CHAR + repeat(WIDTH - 2, ' ') + CHAR);
+	console.log(CHAR + ' ' + s + pad + ' ' + CHAR);
+	console.log(CHAR + repeat(WIDTH - 2, ' ') + CHAR);
+	console.log(repeat(WIDTH, CHAR));
+	console.log();
+}
+
+function print(o, always = false) {
+	(DEBUG || always) && console.log(util.inspect(o, {
 		showHidden: false, depth: null, colors: true
 	}))
 }
 
-function print_matrix(matrix) {
-	console.log(
+function print_matrix(matrix, always = false) {
+	(DEBUG || always) && console.log(
 		matrix.map(
 			row => row.map(v => v.toFixed(2)).join(', ')
 		).join("\n") + "\n"
@@ -47,9 +75,9 @@ function sorted_matrix(matrix) {
 function solve(matrix) {
 	const VARS = matrix[0].length - 1;
 
-	// print_matrix(matrix);
+	print_matrix(matrix);
 	const m = sorted_matrix(matrix).slice(0, VARS);
-	// print_matrix(m);
+	print_matrix(m);
 	
 	for (let col = 0; col < VARS; col++) {
 		for (let row = 0; row < VARS; row++) {
@@ -59,7 +87,7 @@ function solve(matrix) {
 				m[row][rowcol] = m[row][rowcol] - ratio * m[col][rowcol];
 			}
 		}
-		// print_matrix(m);
+		print_matrix(m);
 	}
 	return m.map((row, i) => row[m.length]/row[i]);
 }
@@ -130,11 +158,14 @@ function vector_add(a, b) {
 }
 
 function map_points(points, onto_points, offset) {
-	// console.log('/* -----');
-	// print(points);
+	banner("Map Points START");
+	print(points);
+
 	const offset_points = points.map(p => vector_add(p, offset));
-	// print(offset_points);
-	// print(onto_points);
+
+	print(offset_points);
+	print(onto_points);
+
 	const dimensions = offset_points[0].length;
 	const map = [];
 	for (let d = 0; d < dimensions; d++) {
@@ -142,36 +173,24 @@ function map_points(points, onto_points, offset) {
 		for (const [i, point] of offset_points.entries()) {
 			matrix.push([...point, onto_points[i][d]]);
 		}
-		// print_matrix(matrix);
+		print_matrix(matrix);
 		map.push(solve(matrix));
 	}
-	// console.log(map);
-	// console.log(' ----- */');
+	log(map);
 	return map;
-}
-
-function is_simple(map) {
-	for (const dimension of map) {
-		for (const c of dimension) {
-			if ([-1, 0, 1].every(v => {
-				return c < (v - 0.02) || Number(c) > (0.02 + v)
-			})) {
-				return false;
-			}
-		}
-	}
-	return true;
 }
 
 function orientation_key(o) {
 	return [
 		o.against,
 		...o.offset,
-		...o.map(d => d.map(c => Number(c).toFixed(2)))
+		...o.map.map(d => d.map(c => Number(c).toFixed(2)))
 	].join(',');
 }
 
-function orient_scanner(scanner, features) {
+function orient_scanner(scanner, features, confidence = 4, limit = 4) {
+	const results = [];
+	const index = {};
 	for (const [key, findings] of Object.entries(scanner.features)) {
 		for (const points of findings) {
 			for (const [scanner_id, onto_points] of Object.entries(features[key])) {
@@ -184,15 +203,25 @@ function orient_scanner(scanner, features) {
 					offset, map
 				};
 				const o_key = orientation_key(orientation);
-				if (scanner.index[o_key]) {
-					scanner.index[o_key].confidence++;
+				if (index[o_key]) {
+					index[o_key].confidence++;
 				} else {
-					scanner.orientations.push(orientation);
-					scanner.index[o_key] = orientation;
+					results.push(orientation);
+					index[o_key] = orientation;
 				}
 			}
 		}
 	}
+
+	scanner.orientations = results
+		.filter(o => o.confidence >= confidence)
+		.sort((a,b) => {
+			if (a.confidence < b.confidence) return 1;
+			if (a.confidence > b.confidence) return -1;
+			return 0;
+		})
+		.slice(0, limit)
+	;
 }
 
 for (const scanner of scanners) {
@@ -225,7 +254,7 @@ scanners[0].orientations = [{
 }];
 
 for (const s of scanners) {
-	orient_scanner(s, features);
+	Number(s.id) == 0 || orient_scanner(s, features);
 }
 
 // console.log("ORIGIN");
