@@ -36,12 +36,6 @@ function print_matrix(matrix) {
 	);
 }
 
-function* range(a, b) {
-	for (let i = Math.min(a, b); i <= Math.max(a, b); i++) {
-		yield i;
-	}
-}
-
 function sorted_matrix(matrix) {
 	const m = deepcopy(matrix);
 	const value = row => row.reduce((v, c) => (v << 1) + (c ? 1 : 0), 0);
@@ -50,10 +44,12 @@ function sorted_matrix(matrix) {
 }
 
 function solve(matrix) {
-	print_matrix(matrix);
-	const m = sorted_matrix(matrix);
-	print_matrix(m);
-	const VARS = m[0].length - 1;
+	const VARS = matrix[0].length - 1;
+
+	// print_matrix(matrix);
+	const m = sorted_matrix(matrix).slice(0, VARS);
+	// print_matrix(m);
+	
 	for (let col = 0; col < VARS; col++) {
 		for (let row = 0; row < VARS; row++) {
 			if (row === col) continue;
@@ -62,7 +58,7 @@ function solve(matrix) {
 				m[row][rowcol] = m[row][rowcol] - ratio * m[col][rowcol];
 			}
 		}
-		print_matrix(m);
+		// print_matrix(m);
 	}
 	return m.map((row, i) => row[m.length]/row[i]);
 }
@@ -85,19 +81,33 @@ function by_distance(to_point) {
 	};
 }
 
+function by_universal_order(a, b) {
+	for (let d = 0; d < a.length; d++) {
+		if (Number(a[d]) > Number(b[d])) return 1;
+		if (Number(a[d]) < Number(b[d])) return -1;
+	}
+	return 0;
+}
+
 function get_feature(a, b, c) {
 	return [distance(a, b), distance(b, c), distance(c, a)]
 		.sort()
-		.map(f => f.toFixed(5))
+		.map(f => f.toFixed(0))
 		.join(',')
 	;
 }
 
-function get_features(points) {
+function get_features(points, system_size = 10) {
 	const features = {};
 	points.map(point => {
-		points.sort(by_distance(point));
-		features[get_feature(...points.slice(0, 3))] = points.slice(0, 3);
+		const system = points.sort(by_distance(point)).slice(0, system_size);
+		while (system.length >= 3) {
+			const triad = system.slice(0, 3);
+			const f = get_feature(...triad);
+			features[f] = features[f] || [];
+			features[f].push(triad.sort(by_universal_order));
+			system.splice(1,1);
+		}
 	});
 	return features;
 }
@@ -113,41 +123,60 @@ function vector_subtract(a, b) {
 function vector_add(a, b) {
 	const p = [];
 	for (let i = 0; i < a.length; i++) {
-		p.push(a[i] + b[i]);
+		p.push(Number(a[i]) + Number(b[i]));
 	}
 	return p;
 }
 
 function map_points(points, onto_points, offset) {
-	console.log('/* -----');
-	print(points);
-	print(onto_points);
-	const dimensions = points[0].length;
+	// console.log('/* -----');
+	// print(points);
+	const offset_points = points.map(p => vector_add(p, offset));
+	// print(offset_points);
+	// print(onto_points);
+	const dimensions = offset_points[0].length;
 	const map = [];
 	for (let d = 0; d < dimensions; d++) {
 		const matrix = [];
-		for (const [i, point] of points.entries()) {
+		for (const [i, point] of offset_points.entries()) {
 			matrix.push([...point, onto_points[i][d]]);
 		}
-		print_matrix(matrix);
+		// print_matrix(matrix);
 		map.push(solve(matrix));
 	}
-	console.log(map);
-	console.log(' ----- */');
+	// console.log(map);
+	// console.log(' ----- */');
 	return map;
 }
 
+function is_simple(map) {
+	for (const dimension of map) {
+		for (const c of dimension) {
+			if ([-1, 0, 1].every(v => {
+				return c < (v - 0.02) || Number(c) > (0.02 + v)
+			})) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
 function orient_scanner(scanner, features) {
-	for (const [key, points] of Object.entries(scanner.features)) {
-		for (const [scanner_id, onto_points] of Object.entries(features[key])) {
-			if (scanner_id === scanner.id) continue;
-			const offset = vector_subtract(onto_points[0], points[0]);
-			const map = map_points(points, onto_points, offset);
-			scanner.orientations.push({
-				against: Number(scanner_id),
-				confidence: 1,
-				offset, map
-			});
+	for (const [key, findings] of Object.entries(scanner.features)) {
+		for (const points of findings) {
+			for (const [scanner_id, onto_points] of Object.entries(features[key])) {
+				if (Number(scanner_id) == Number(scanner.id)) continue;
+				const offset = vector_subtract(onto_points[0], points[0]);
+				const map = map_points(points, onto_points, offset);
+				if (is_simple(map)) {
+					scanner.orientations.push({
+						against: Number(scanner_id),
+						confidence: 1,
+						offset, map
+					});
+				}
+			}
 		}
 	}
 }
@@ -158,9 +187,11 @@ for (const scanner of scanners) {
 
 const features = {};
 for (const scanner of scanners) {
-	for (const [key, points] of Object.entries(scanner.features)) {
-		features[key] = features[key] || {};
-		features[key][scanner.id] = points;
+	for (const [key, findings] of Object.entries(scanner.features)) {
+		for (const points of findings) {
+			features[key] = features[key] || {};
+			features[key][scanner.id] = points;
+		}
 	}
 }
 
@@ -183,8 +214,13 @@ for (const s of scanners) {
 	orient_scanner(s, features);
 }
 
-console.log('SCANNERS');
-print(scanners);
+// console.log("ORIGIN");
+// print(scanners[0]);
 
-console.log('FEATURES');
-print(features);
+console.log('SCANNERS');
+print(scanners.map(s => {
+	return {id: s.id, orientations: s.orientations}
+}));
+
+// console.log('FEATURES');
+// print(features);
