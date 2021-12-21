@@ -13,7 +13,8 @@ const scanners = fs.readFileSync(0, 'utf-8')
 				.filter(b => b)
 				.map(s => s.split(',').map(v => parseInt(v))),
 			features: {},
-			orientations: []
+			orientations: [],
+			index: {}
 		};
 	})
 ;
@@ -162,6 +163,14 @@ function is_simple(map) {
 	return true;
 }
 
+function orientation_key(o) {
+	return [
+		o.against,
+		...o.offset,
+		...o.map(d => d.map(c => Number(c).toFixed(2)))
+	].join(',');
+}
+
 function orient_scanner(scanner, features) {
 	for (const [key, findings] of Object.entries(scanner.features)) {
 		for (const points of findings) {
@@ -169,12 +178,17 @@ function orient_scanner(scanner, features) {
 				if (Number(scanner_id) == Number(scanner.id)) continue;
 				const offset = vector_subtract(onto_points[0], points[0]);
 				const map = map_points(points, onto_points, offset);
-				if (is_simple(map)) {
-					scanner.orientations.push({
-						against: Number(scanner_id),
-						confidence: 1,
-						offset, map
-					});
+				const orientation = {
+					against: Number(scanner_id),
+					confidence: 1,
+					offset, map
+				};
+				const o_key = orientation_key(orientation);
+				if (scanner.index[o_key]) {
+					scanner.index[o_key].confidence++;
+				} else {
+					scanner.orientations.push(orientation);
+					scanner.index[o_key] = orientation;
 				}
 			}
 		}
