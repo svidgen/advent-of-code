@@ -2,7 +2,7 @@ const fs = require('fs');
 const { off } = require('process');
 const util = require('util');
 
-const DEBUG = true;
+const DEBUG = false;
 
 const scanners = fs.readFileSync(0, 'utf-8')
 	.split(/--- scanner \d+ ---/g)
@@ -33,7 +33,7 @@ function deepcopy(o) {
 }
 
 function log(s) {
-	DEBUG && console.log(s);
+	print(s);
 }
 
 function banner(s, always = false) {
@@ -75,8 +75,12 @@ function sorted_matrix(matrix) {
 function solve(matrix) {
 	const VARS = matrix[0].length - 1;
 
+	log(`solve matrix (${VARS}x${VARS})`);
 	print_matrix(matrix);
+
 	const m = sorted_matrix(matrix).slice(0, VARS);
+
+	log('sorted');
 	print_matrix(m);
 	
 	for (let col = 0; col < VARS; col++) {
@@ -87,9 +91,18 @@ function solve(matrix) {
 				m[row][rowcol] = m[row][rowcol] - ratio * m[col][rowcol];
 			}
 		}
+		log('solved col ' + col);
 		print_matrix(m);
 	}
-	return m.map((row, i) => row[m.length]/row[i]);
+	const mapping = m.map((row, i) => {
+		return Math.round(row[m.length]/row[i]);
+	});
+
+	log('solution');
+	log(mapping);
+	log('\n');
+
+	return mapping;
 }
 
 function distance(a, b) {
@@ -126,15 +139,17 @@ function get_feature(a, b, c) {
 	;
 }
 
-function get_features(points, system_size = 10) {
+function get_features(points, system_size = 20) {
 	const features = {};
 	points.map(point => {
 		const system = points.sort(by_distance(point)).slice(0, system_size);
+		// log({point, system});
 		while (system.length >= 3) {
 			const triad = system.slice(0, 3);
 			const f = get_feature(...triad);
 			features[f] = features[f] || [];
-			features[f].push(triad.sort(by_universal_order));
+			// features[f].push(triad.sort(by_universal_order));
+			features[f].push(triad);
 			system.splice(1,1);
 		}
 	});
@@ -159,16 +174,26 @@ function vector_add(a, b) {
 
 function map_points(points, onto_points, offset) {
 	banner("Map Points START");
+
+	log('points');
 	print(points);
+
+	log('onto point');
+	print(onto_points);
+
+	log('offsets');
+	print(offset);
 
 	const offset_points = points.map(p => vector_add(p, offset));
 
+	log('offset points');
 	print(offset_points);
-	print(onto_points);
+
 
 	const dimensions = offset_points[0].length;
 	const map = [];
 	for (let d = 0; d < dimensions; d++) {
+		log('solving dimension ' + d);
 		const matrix = [];
 		for (const [i, point] of offset_points.entries()) {
 			matrix.push([...point, onto_points[i][d]]);
@@ -176,6 +201,8 @@ function map_points(points, onto_points, offset) {
 		print_matrix(matrix);
 		map.push(solve(matrix));
 	}
+
+	log('map');
 	log(map);
 	return map;
 }
@@ -263,7 +290,7 @@ for (const s of scanners) {
 console.log('SCANNERS');
 print(scanners.map(s => {
 	return {id: s.id, orientations: s.orientations}
-}));
+}), true);
 
 // console.log('FEATURES');
 // print(features);
