@@ -42,19 +42,30 @@ function* range(a, b) {
 	}
 }
 
-function solve(matrix) {
+function sorted_matrix(matrix) {
 	const m = deepcopy(matrix);
-	for (let col = 0; col < m.length - 1; col++) {
-		for (let row = 0; row < m.length - 1; row++) {
+	const value = row => row.reduce((v, c) => (v << 1) + (c ? 1 : 0), 0);
+	m.sort((a,b) => value(a) > value(b) ? 1 : value(a) < value(b) ? -1 : 0).reverse();
+	return m;
+}
+
+function solve(matrix) {
+	print_matrix(matrix);
+	const m = sorted_matrix(matrix);
+	print_matrix(m);
+	const VARS = m[0].length - 1;
+	for (let col = 0; col < VARS; col++) {
+		for (let row = 0; row < VARS; row++) {
 			if (row === col) continue;
 			const ratio = m[row][col] / m[col][col];
-			for (const rowcol of range(0, m.length)) {
+			for (let rowcol = 0; rowcol <= VARS; rowcol++) {
 				m[row][rowcol] = m[row][rowcol] - ratio * m[col][rowcol];
 			}
 		}
+		print_matrix(m);
 	}
 	return m.map((row, i) => row[m.length]/row[i]);
-};
+}
 
 function distance(a, b) {
 	let squared_sums = 0;
@@ -108,7 +119,10 @@ function vector_add(a, b) {
 }
 
 function map_points(points, onto_points, offset) {
-	const dimensions = points[0].length - 1;
+	console.log('/* -----');
+	print(points);
+	print(onto_points);
+	const dimensions = points[0].length;
 	const map = [];
 	for (let d = 0; d < dimensions; d++) {
 		const matrix = [];
@@ -118,6 +132,8 @@ function map_points(points, onto_points, offset) {
 		print_matrix(matrix);
 		map.push(solve(matrix));
 	}
+	console.log(map);
+	console.log(' ----- */');
 	return map;
 }
 
