@@ -131,26 +131,28 @@ function by_universal_order(a, b) {
 	return 0;
 }
 
-function get_feature(a, b, c) {
-	return [distance(a, b), distance(b, c), distance(c, a)]
-		.sort()
-		.map(f => f.toFixed(0))
-		.join(',')
-	;
+function get_feature(points) {
+	const distances = [];
+	for (const i of points.keys()) {
+		distances.push(distance(
+			points[i % points.length],
+			points[(i + 1) % points.length]
+		));
+	}
+	return distances.sort().map(f => f.toFixed(0)).join(',');
 }
 
-function get_features(points, system_size = 20) {
+function get_features(points, system_size = 4 * 4 - 1) {
 	const features = {};
 	points.map(point => {
 		const system = points.sort(by_distance(point)).slice(0, system_size);
-		// log({point, system});
-		while (system.length >= 3) {
-			const triad = system.slice(0, 3);
-			const f = get_feature(...triad);
-			features[f] = features[f] || [];
-			// features[f].push(triad.sort(by_universal_order));
-			features[f].push(triad);
-			system.splice(1,1);
+		for (let i = 1; i < system.length - 2; i++) {
+			for (let j = i + 1; j < system.length - 1; j++) {
+				const feature = [system[0], system[i], system[j]];
+				const f = get_feature(feature);
+				features[f] = features[f] || [];
+				features[f].push(feature);
+			}
 		}
 	});
 	return features;
@@ -215,7 +217,15 @@ function orientation_key(o) {
 	].join(',');
 }
 
-function orient_scanner(scanner, features, confidence = 4, limit = 4) {
+function flat_abs_sum(matrix) {
+	let sum = 0;
+	for (const v of matrix.flat()) {
+		sum += Math.abs(v);
+	}
+	return sum;
+}
+
+function orient_scanner(scanner, features, confidence = 2, limit = 50) {
 	const results = [];
 	const index = {};
 	for (const [key, findings] of Object.entries(scanner.features)) {
@@ -242,12 +252,25 @@ function orient_scanner(scanner, features, confidence = 4, limit = 4) {
 
 	scanner.orientations = results
 		.filter(o => o.confidence >= confidence)
+		// .filter(o => flat_abs_sum(o.map) < 6)
+		.reduce((index, o) => {
+			const i = Number(o.against);
+			if (!index[i]) {
+				index[i] = o;
+			} else if (o.confidence > index[i].confidence) {
+				index[i] = o;
+			}
+			return index;
+		}, [])
+		.filter(item => item)
 		.sort((a,b) => {
 			if (a.confidence < b.confidence) return 1;
 			if (a.confidence > b.confidence) return -1;
+			// if (flat_abs_sum(a.map) > flat_abs_sum(b.map)) return 1;
+			// if (flat_abs_sum(a.map) < flat_abs_sum(b.map)) return 1;
 			return 0;
 		})
-		.slice(0, limit)
+		// .slice(0, limit ? limit : undefined)
 	;
 }
 
