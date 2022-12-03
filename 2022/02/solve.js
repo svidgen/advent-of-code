@@ -19,16 +19,24 @@ const inferiorOf = move => {
 	// to the end of the moves array after we go below 0.
 	//
 	// easy enough to do if we project out past the end and use modulus.
-	const inferiorIdx = (moveIndex[move] + moves.length) - 1 % moves.length;
-	return moves[inferiorIdx];
+	const i = ( moveIndex[move] + moves.length - 1 ) % moves.length;
+	return moves[i];
 };
 
 const superiorOf = move => {
 	// it's just the move index + 1, wrapper back around to the start
 	// if we go past the end of the array.
-	const superiorIdx = ( moveIndex[move] + 1 ) % moves.length;
-	return moves[superiorIdx];
-}
+	const i = ( moveIndex[move] + 1 ) % moves.length;
+	return moves[i];
+};
+
+const calculateResponse = (move, code) => {
+	return {
+		X: () => inferiorOf(move),
+		Y: () => move,
+		Z: () => superiorOf(move)
+	}[code]();
+};
 
 const roundScore = (move, response) => {
 	if (response === move) return 3;
@@ -53,16 +61,13 @@ for (const line of lines) {
 
 	const partOneScore = score(move, translate(response));
 	partOneTotal += partOneScore;
-	console.log({move, response, partOneScore});
 
-	/*
-	const partTwoResponse = translate(move, response);
+	const partTwoResponse = calculateResponse(move, response);
 	const partTwoScore = score(move, partTwoResponse);
 	partTwoTotal += partTwoScore;
 
 	console.log({move, response, partOneScore, partTwoResponse, partTwoScore});
-	*/
 }
 
-console.log({partOneTotal});
+console.log({partOneTotal, partTwoTotal});
 
