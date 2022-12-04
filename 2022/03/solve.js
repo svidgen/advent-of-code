@@ -28,10 +28,8 @@ const compartmentsOf = (line, qty) => {
 	return compartments;
 };
 
-const sacks = lines.filter(l => l).map(sack => compartmentsOf(sack, 2));
-
-const collisions = sacks.map(sack => {
-	const itemIndex = sack.reduce((agg, compartment, idx) => {
+const collisionsBetween = collections => {
+	const itemIndex = collections.reduce((agg, compartment, idx) => {
 		for (const [item, count] of Object.entries(compartment)) {
 			agg[item] = agg[item] || [];
 			agg[item].push(idx);
@@ -41,14 +39,20 @@ const collisions = sacks.map(sack => {
 	return Object.entries(itemIndex).filter(([item, comparts]) =>
 		comparts.length > 1
 	).map(([item]) => item);
-});
+};
 
+// part 1
+const sacks = lines.filter(l => l).map(sack => compartmentsOf(sack, 2));
+const collisions = sacks.map(sack => collisionsBetween(sack));
 const pScores = collisions.map(c => c.reduce((sum, item) => 
 	sum += priority[item],
 	0
 ));
-
 const finalScore = pScores.reduce((sum, score) => sum += score, 0);
+
+// part 2
+//
+// ....
 
 console.log(JSON.stringify({
 	sacks,
