@@ -13,6 +13,10 @@ class Range {
 	contains(b) {
 		return this.start <= b.start && this.end >= b.end;
 	}
+
+	containsAny(b) {
+		return this.start <= b.end && this.end >= b.start;
+	}
 }
 
 class Pair {
@@ -26,14 +30,24 @@ class Pair {
 	get hasFullOverlap() {
 		return this.a.contains(this.b) || this.b.contains(this.a);
 	}
+
+	get hasAnyOverlap() {
+		return this.a.containsAny(this.b) || this.b.containsAny(this.a);
+	}
 }
 
 const pairs = lines.map(line => new Pair(line));
-const overlaps = pairs.filter(p => p.hasFullOverlap);
+
+const fulloverlaps = pairs.filter(p => p.hasFullOverlap);
+const fulloverlapCounts = fulloverlaps.length;
+
+const overlaps = pairs.filter(p => p.hasAnyOverlap);
 const overlapCounts = overlaps.length;
 
 console.log(JSON.stringify({
 	pairs,
+	fulloverlaps,
+	fulloverlapCounts,
 	overlaps,
 	overlapCounts
 }, null, 2));
