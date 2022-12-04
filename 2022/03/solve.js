@@ -29,9 +29,32 @@ const compartmentsOf = (line, qty) => {
 };
 
 const sacks = lines.filter(l => l).map(sack => compartmentsOf(sack, 2));
-const p = sacks.reduce((total, sack) => {
-	const counts = sack.reduce((hits, compartment) => {
-	}, {});
-}, 0);
 
-console.log(JSON.stringify({sacks, items, index}, null, 2));
+const collisions = sacks.map(sack => {
+	const itemIndex = sack.reduce((agg, compartment, idx) => {
+		for (const [item, count] of Object.entries(compartment)) {
+			agg[item] = agg[item] || [];
+			agg[item].push(idx);
+		}
+		return agg;
+	}, {});
+	return Object.entries(itemIndex).filter(([item, comparts]) =>
+		comparts.length > 1
+	).map(([item]) => item);
+});
+
+const pScores = collisions.map(c => c.reduce((sum, item) => 
+	sum += priority[item],
+	0
+));
+
+const finalScore = pScores.reduce((sum, score) => sum += score, 0);
+
+console.log(JSON.stringify({
+	sacks,
+	items,
+	priority,
+	collisions,
+	pScores,
+	finalScore
+}, null, 2));
