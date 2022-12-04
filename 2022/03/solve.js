@@ -28,7 +28,7 @@ const compartmentsOf = (line, qty) => {
 	return compartments;
 };
 
-const collisionsBetween = collections => {
+const collisionsBetween = (collections, limit = 2) => {
 	const itemIndex = collections.reduce((agg, compartment, idx) => {
 		for (const [item, count] of Object.entries(compartment)) {
 			agg[item] = agg[item] || [];
@@ -37,7 +37,7 @@ const collisionsBetween = collections => {
 		return agg;
 	}, {});
 	return Object.entries(itemIndex).filter(([item, comparts]) =>
-		comparts.length > 1
+		comparts.length >= limit
 	).map(([item]) => item);
 };
 
@@ -51,8 +51,19 @@ const pScores = collisions.map(c => c.reduce((sum, item) =>
 const finalScore = pScores.reduce((sum, score) => sum += score, 0);
 
 // part 2
-//
-// ....
+const groups = lines.map((line, i) => [
+	Math.floor(i / 3), line
+]).reduce((g, [idx, line]) => {
+	g[idx] = g[idx] || [];
+	g[idx].push(compartmentsOf(line, 1).pop());
+	return g;
+}, []).filter(g => g.length === 3);
+const groupCollisions = groups.map(g => collisionsBetween(g, 3));
+const p2Scores = groupCollisions.map(c => c.reduce((sum, item) => 
+	sum += priority[item],
+	0
+));
+const p2finalScore = p2Scores.reduce((sum, score) => sum += score, 0);
 
 console.log(JSON.stringify({
 	sacks,
@@ -60,5 +71,9 @@ console.log(JSON.stringify({
 	priority,
 	collisions,
 	pScores,
-	finalScore
+	finalScore,
+	groups,
+	groupCollisions,
+	p2Scores,
+	p2finalScore
 }, null, 2));
