@@ -13,9 +13,19 @@ class Instruction {
 		this.moveTo = parsed[3];
 	}
 
-	execute() {
+	execute(moveFrom, moveTo) {
 		for (let i = 0; i < this.moveQty; i++) {
 			stacks[this.moveTo - 1].push(stacks[this.moveFrom - 1].pop());
+		}
+	}
+
+	executeV2() {
+		const temp = [];
+		for (let i = 0; i < this.moveQty; i++) {
+			temp.push(stacks[this.moveFrom - 1].pop());
+		}
+		for (let i = 0; i < this.moveQty; i++) {
+			stacks[this.moveTo - 1].push(temp.pop());
 		}
 	}
 }
@@ -68,7 +78,18 @@ for (const stack of stacks) {
 
 console.log(stacks);
 for (const c of instructions) {
-	c.execute();
+	// execution steps mutate state.
+	// part 1 and part 2 cannot run concurrently
+
+	// part 1
+	// c.executeV2();
+
+	// part 2
+	c.executeV2();
 }
-console.log(stacks, stacks.map(s => s[s.length - 1]).join(''));
+
+console.log(
+	stacks,
+	stacks.map(s => s[s.length - 1]).join(''),
+);
 
