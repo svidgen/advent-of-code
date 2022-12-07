@@ -26,14 +26,10 @@ class Cursor {
 	}
 }
 
-const cursor = new Cursor(data);
-
-while (!cursor.isAtMarker(PACKET_MARKER_SIZE)) {
-	cursor.advance();
-}
-console.log(cursor.position + PACKET_MARKER_SIZE);
-
-while (!cursor.isAtMarker(MESSAGE_MARKER_SIZE)) {
-	cursor.advance();
-}
-console.log(cursor.position + MESSAGE_MARKER_SIZE);
+[PACKET_MARKER_SIZE, MESSAGE_MARKER_SIZE].forEach(SIZE => {
+	const cursor = new Cursor(data);
+	while (!cursor.isAtMarker(SIZE)) {
+		cursor.advance();
+	}
+	console.log(cursor.position + SIZE);
+});
