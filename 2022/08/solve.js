@@ -72,13 +72,6 @@ class GridItem {
 		west: undefined,
 	};
 
-	visibleIn = {
-		north: undefined,
-		south: undefined,
-		east: undefined,
-		west: undefined
-	};
-
 	constructor(grid, row, col, data) {
 		this.grid = grid;
 		this.row = row;
@@ -127,17 +120,41 @@ class GridItem {
 	}
 
 	treesVisibleIn(direction) {
+		let n = this[direction];
+		let d = 0;
+		while (n) {
+			d++;
+			if (this.data > n.data) {
+				n = n[direction];
+			} else {
+				break;
+			}
+		}
+		return d;
+	}
 
+	get visibilityScore() {
+		return this.treesVisibleIn('north') *
+			this.treesVisibleIn('south') *
+			this.treesVisibleIn('east') *
+			this.treesVisibleIn('west')
+		;
 	}
 }
 
-let total = 0;
 const grid = new Grid(realData);
-console.log(grid)
+
+let part1 = 0;
+let part2 = 0;
+
 for (const tree of grid.enumerate()) {
+	part2 = Math.max(part2, tree.visibilityScore);
 	if (tree.isVisible) {
-		total += 1;
+		part1 += 1;
 	}
 }
 
-console.log(total);
+console.log({
+	part1,
+	part2
+});
