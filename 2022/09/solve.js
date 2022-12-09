@@ -1,9 +1,11 @@
-const { sample, real } = require('./data.js');
+const { sample, sample2, real } = require('./data.js');
 
 const lines = real.split('\n');
 
-let head = { x: 0, y: 0 };
-let tail = { x: 0, y: 0 };
+const KNOTS = 10;
+const knots = [...new Array(KNOTS)].map(() => ({ x: 0, y: 0 }));
+const HEAD = 0;
+const TAIL = knots.length - 1;
 const visited = new Map();
 
 const moves = [];
@@ -32,38 +34,53 @@ const moveCoord = (d) => {
 }
 
 const moveHead = d => {
-	head = addCoords(head, moveCoord(d));
+	knots[HEAD] = addCoords(knots[HEAD], moveCoord(d));
 };
 
-const moveTail = () => {
+const moveKnot = idx => {
+	const knot = knots[idx];
+	const prev = knots[idx - 1];
+
 	let move = { x: 0, y: 0 };
-	const dist = Math.sqrt(Math.pow(head.x - tail.x, 2) + Math.pow(head.y - tail.y, 2));
+	const dist = Math.sqrt(Math.pow(prev.x - knot.x, 2) + Math.pow(prev.y - knot.y, 2));
 
 	if (dist >= 2) {
-		if (head.y > tail.y) move = addCoords(move, moveCoord('U'));
-		if (head.y < tail.y) move = addCoords(move, moveCoord('D'));
-		if (head.x > tail.x) move = addCoords(move, moveCoord('R'));
-		if (head.x < tail.x) move = addCoords(move, moveCoord('L'));
+		if (prev.y > knot.y) move = addCoords(move, moveCoord('U'));
+		if (prev.y < knot.y) move = addCoords(move, moveCoord('D'));
+		if (prev.x > knot.x) move = addCoords(move, moveCoord('R'));
+		if (prev.x < knot.x) move = addCoords(move, moveCoord('L'));
 	}
 
-	tail = addCoords(tail, move);
+	knots[idx] = addCoords(knot, move);
+};
+
+const moveKnots = () => {
+	for (let idx = 1; idx < knots.length; idx++) {
+		moveKnot(idx);
+	}
 };
 
 const print = () => {
-	const SIZE = 6;
+	const SIZE = 30;
+	const LOWER = 0 - Math.floor(SIZE / 2);
+	const UPPER = Math.floor(SIZE / 2);
 	const lines = [];
-	for (let y = SIZE - 1; y >= 0; y--) {
+	for (let y = UPPER; y >= LOWER; y--) {
 		const line = [];
-		for (let x = 0; x < SIZE; x++) {
-			if (head.x === x && head.y === y) {
-				line.push('H');
-			} else {
-				if (tail.x === x && tail.y === y) {
-					line.push('T');
-				} else {
-					line.push('.');
+		for (let x = LOWER; x < UPPER; x++) {
+			let repr = '.';
+			for (let idx = 0; idx < knots.length; idx++) {
+				const knot = knots[idx];
+				if (knot.x === x && knot.y === y) {
+					if (idx === 0) {
+						repr = 'H';
+					} else {
+						repr = idx;
+					}
+					break;
 				}
 			}
+			line.push(repr);
 		}
 		lines.push(line.join(''));
 	}
@@ -72,19 +89,16 @@ const print = () => {
 };
 
 const recordTailPosition = () => {
-	const k = `${tail.x},${tail.y}`;
+	const k = `${knots[TAIL].x},${knots[TAIL].y}`;
 	visited.set(k, 1);
 };
 
 // print();
 for (const move of moves) {
-	const start = {head, tail};
 	moveHead(move);
-	moveTail();
+	moveKnots();
 	recordTailPosition();
 	// print();
-	const end = {head, tail};
-	// console.log({start, move, end});
 }
 
 console.log(visited.keys(), visited.size)
