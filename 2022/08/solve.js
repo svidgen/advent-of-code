@@ -34,6 +34,17 @@ class Grid {
 	}
 
 	/**
+	 * Enumerates all grid items.
+	 */
+	* enumerate() {
+		for (let row = 0; row < grid.height; row++) {
+			for (let col = 0; col < grid.width; col++) {
+				yield this.get(row, col);
+			}
+		}
+	}
+
+	/**
 	 * Width of the grid, assuming the first row is representative.
 	 */
 	get width() {
@@ -59,6 +70,13 @@ class GridItem {
 		south: undefined,
 		east: undefined,
 		west: undefined,
+	};
+
+	visibleIn = {
+		north: undefined,
+		south: undefined,
+		east: undefined,
+		west: undefined
 	};
 
 	constructor(grid, row, col, data) {
@@ -107,17 +125,18 @@ class GridItem {
 			this.data > this[direction]?.maxHeightFrom(direction)
 		;
 	}
+
+	treesVisibleIn(direction) {
+
+	}
 }
 
 let total = 0;
 const grid = new Grid(realData);
 console.log(grid)
-for (let row = 0; row < grid.height; row++) {
-	for (let col = 0; col < grid.width; col++) {
-		// console.log(`visiting ${row}, ${col} -> ${grid.get(row, col).data} -> ${grid.get(row, col).isVisible}`);
-		if (grid.get(row, col).isVisible) {
-			total += 1;
-		}
+for (const tree of grid.enumerate()) {
+	if (tree.isVisible) {
+		total += 1;
 	}
 }
 
