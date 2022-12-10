@@ -2,7 +2,7 @@ const fs = require('fs');
 const process = require('process');
 
 const raw = fs.readFileSync(process.argv[2]).toString().trim();
-const instructions = raw.split('\n');
+const instructions = raw.split(/\r?\n/);
 
 let register = 1;
 
