@@ -1,11 +1,31 @@
 export type TreePattern = Sequence | Union | Recipe | Token;
 
-export type AST = {
-    type: string,
-    code: string,
-    start: number,
-    end: number,
-    children: AST[],
+export class AST {
+	public type: string;
+	public code: string;
+	public start: number;
+	public end: number;
+	public children: AST[];
+
+	constructor(
+		{ type, code, start, end, children }: {
+			type: string,
+			code: string,
+			start: number,
+			end: number,
+			children: AST[]
+		}
+	) {
+		this.type = type;
+		this.code = code;
+		this.start = start;
+		this.end = end;
+		this.children = children;
+	}
+
+	public get(type: string): AST[] {
+		return this.children.filter(c => c.type === type);
+	}
 }
 
 export class Sequence {
@@ -24,13 +44,13 @@ export class Sequence {
             subtree = this.child.parse({code, at: subtree.end});
         }
 
-        return children.length > 0 ? {
+        return children.length > 0 ? new AST({
             type: this.name,
             code: code.substring(at, children[children.length - 1].end),
             start: at,
             end: children[children.length - 1].end,
             children
-        } : null;
+        }) : null;
     }
 }
 
@@ -45,13 +65,13 @@ export class Union {
         for (const option of this.options) {
             const parsed = option.parse({code, at});
             if (parsed) {
-                return {
+                return new AST({
                     type: this.name,
                     code: code.substring(at, parsed.end),
                     start: at,
                     end: parsed.end,
                     children: [parsed],
-                }
+                });
             }
         }
         return null;
@@ -80,13 +100,13 @@ export class Recipe {
             }
         }
 
-        return {
+        return new AST({
             type: this.name,
             code: code.substring(at, children[children.length - 1].end),
             start: at,
             end: children[children.length - 1].end,
             children,
-        };
+        });
     }
 }
 
@@ -103,12 +123,12 @@ export class Token {
 
     parse({code, at = 0}: {code: string, at?: number}): AST | null {
         const matched = this.pattern.exec(code.substring(at));
-        return (matched && matched.index === 0) ? {
+        return (matched && matched.index === 0) ? new AST({
             type: this.name,
             code: matched[0],
             start: at,
             end: at + matched[0].length,
             children: [],
-        } : null;
+        }) : null;
     }
 }

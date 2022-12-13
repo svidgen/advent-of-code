@@ -57,11 +57,16 @@ const ITEMS_DEFINITION = new Recipe(
 	]
 );
 
+const LIST_ITEM_SEPARATOR = new Token("LIST_ITEM_SEPARATOR", /^,/, true);
+
 const VALUE_LIST_ITEM = new Recipe(
 	"VALUE_LIST_ITEM",
 	[
+		WHITESPACE,
 		LIST_ITEM_SEPARATOR,
+		WHITESPACE,
 		VALUE,
+		WHITESPACE
 	]
 );
 
@@ -75,6 +80,23 @@ const STATEMENT = new Recipe("STATEMENT", [
     EOS
 ]);
 
+const TEST = new Recipe(
+	"TEST",
+	[
+		new Token("TEST_BOILERPLATE", /^Test: divisible by/),
+		WHITESPACE,
+		NUMBER,
+		WHITESPACE,
+		new Token("TRUE_OPTION_BOILER", /^If true: throw to monkey/),
+		WHITESPACE,
+		NUMBER,
+		WHITESPACE,
+		new Token("FALSE_OPTION_BOILER", /^If false: throw to monkey/),
+		WHITESPACE,
+		NUMBER
+	]
+)
+
 const MONKEY_KW = new Token("MONKEY_KW", /^monkey/i);
 const MONKEY_ID = new Union("MONKEY_ID", [ INTEGER ]);
 const MONKEY = new Recipe(
@@ -83,61 +105,11 @@ const MONKEY = new Recipe(
 		MONKEY_KW, WHITESPACE, MONKEY_ID, DEF_SEPARATOR,
 			WHITESPACE, ITEMS_DEFINITION,	
 			WHITESPACE, OP_DEFINITION,	
-			WHITESPACE, TEST
+			WHITESPACE, TEST,
 			WHITESPACE
 	]
 );
 
-/**
- * The output.
- */
+const GAME = new Sequence("GAME", MONKEY);
 
-const outputAsyncJS = (ast: AST): string => {
-    switch (ast.type) {
-        case 'PROGRAM':
-            return `(async () => {\n${ast.children
-                .map(c => outputAsyncJS(c))
-                .filter(o => o).join(";") }})();`
-            ;
-        case 'STATEMENT':
-        case 'STATEMENT_BODY':
-            return ast.children
-                .map(c => outputAsyncJS(c))
-                .filter(o => o).join(";")
-            ;
-        case 'ASSIGNMENT':
-            return ast.children
-                .filter(c => c.type !== 'WHITESPACE')
-                .map(c => outputAsyncJS(c)).join(" ")
-            ;
-        case 'ASSIGNMENT_OPERATOR':
-            return '=';
-        case 'NAME':
-            return ast.code;
-        case 'VALUE':
-            return 'await ' + ast.code;
-        case 'EOS':
-        case 'WHITESPACE':
-        case 'NOISE':
-            return '';
-        default:
-            throw new Error(`Unknown token "${ast.type}":\n${ast.code}`)
-    }
-};
-
-/**
- * Execution.
- */
-const grammar = new Sequence('PROGRAM', STATEMENT);
-const syntaxTree = grammar.parse({code: `
-    xyz <- 123 ;;;
-
-    ;  abc <- xyz
-`});
-const js = syntaxTree ? outputAsyncJS(syntaxTree) : '';
-
-console.clear();
-console.log({
-    syntaxTree,
-    js
-});
+export default GAME;
