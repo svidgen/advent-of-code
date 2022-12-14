@@ -1,4 +1,7 @@
-export type TreePattern = Sequence | Union | Recipe | Token;
+export type TreePatternObject = Sequence | Union | Recipe | Token;
+export type TreePattern = TreePatternObject | string;
+
+const registry = new Map<string, TreePatternObject>();
 
 export class AST {
 	public type: string;
@@ -28,20 +31,33 @@ export class AST {
 	}
 }
 
+function raise(nodeType: TreePatternObject, message: string): null {
+	throw new Error(`${nodeType.name} : ${message}`);
+}
+
 export class Sequence {
     constructor(
         public name: string,
         public child: TreePattern,
         public optional: boolean = false
-    ) {}
+    ) {
+		registry.set(name, this);
+	}
 
-    parse({code, at = 0}: {code: string, at?: number}): AST | null {
+    parse({code, at = 0, optional = undefined}: {code: string, at?: number, optional?: boolean}): AST | null {
         const children: AST[] = [];
 
-        let subtree = this.child.parse({code, at});
+		const child = typeof this.child === 'string' ?
+			registry.get(this.child) :
+			this.child
+		;
+
+		const allowEmpty = typeof optional === 'boolean' ? optional : optional;
+
+        let subtree = child.parse({code, at});
         while (subtree) {
             children.push(subtree);
-            subtree = this.child.parse({code, at: subtree.end});
+            subtree = child.parse({code, at: subtree.end});
         }
 
         return children.length > 0 ? new AST({
@@ -50,7 +66,9 @@ export class Sequence {
             start: at,
             end: children[children.length - 1].end,
             children
-        }) : null;
+        }) : (allowEmpty ? null : raise(
+			this, `At least one ${child.name} is required.`
+		));
     }
 }
 
@@ -59,11 +77,18 @@ export class Union {
         public name: string,
         public options: TreePattern[],
         public optional: boolean = false
-    ) {}
+    ) {
+		registry.set(name, this);
+	}
 
     parse({code, at = 0}: {code: string, at?: number}): AST | null {
         for (const option of this.options) {
-            const parsed = option.parse({code, at});
+			const child = typeof option === 'string' ?
+				registry.get(option) :
+				option
+			;
+
+            const parsed = child.parse({code, at});
             if (parsed) {
                 return new AST({
                     type: this.name,
@@ -83,19 +108,26 @@ export class Recipe {
         public name: string,
         public children: TreePattern[],
         public optional: boolean = false
-    ) {}
+    ) {
+		registry.set(name, this);
+	}
 
     parse({code, at = 0}: {code: string, at?: number}): AST | null {
         const children: AST[] = [];
 
         for (const option of this.children) {
-            const parsed = option.parse({
+			const child = typeof option === 'string' ?
+				registry.get(option) :
+				option
+			;
+
+            const parsed = child.parse({
                 code,
                 at: children.length > 0 ? children[children.length - 1].end : at
             });
             if (parsed) {
                 children.push(parsed);
-            } else if (!option.optional) {
+            } else if (!child.optional) {
                 return null;
             }
         }
@@ -119,7 +151,9 @@ export class Token {
         public name: string,
         public pattern: RegExp,
         public optional: boolean = false
-    ) {}
+    ) {
+		registry.set(name, this);
+	}
 
     parse({code, at = 0}: {code: string, at?: number}): AST | null {
         const matched = this.pattern.exec(code.substring(at));

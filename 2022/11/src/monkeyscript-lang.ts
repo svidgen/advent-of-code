@@ -24,7 +24,7 @@ const VALUE = new Union("VALUE", [ NAME, NUMBER ]);
 
 const EXPRESSION = new Union(
 	"EXPRESSION",
-	[ NAME, VALUE, OPERATION ]
+	[ NAME, VALUE, "OPERATION" ]
 );
 
 const OPERATION = new Recipe(
@@ -53,7 +53,7 @@ const ITEMS_DEFINITION = new Recipe(
 		new Token("OP_KEYWORD", /^starting items/i),
 		DEF_SEPARATOR,
 		WHITESPACE,
-		VALUE_LIST
+		"VALUE_LIST"
 	]
 );
 
