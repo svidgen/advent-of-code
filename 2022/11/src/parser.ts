@@ -31,8 +31,40 @@ export class AST {
 	}
 }
 
-function raise(nodeType: TreePatternObject, message: string): null {
-	throw new Error(`${nodeType.name} : ${message}`);
+function codeAt(
+	code: string,
+	at: number
+) {
+	let start = at;
+	while (start >= 0 && code[start] !== "\n") {
+		start--;
+	}
+
+	let end = at;
+	while (end < code.length && code[end] !== "\n") {
+		end++;
+	}
+
+	let i = at;
+	let lineNumber = 0;
+	while (i >= 0) {
+		if (code[i] === "\n") lineNumber++;
+		i--;
+	}
+
+	const firstLine = code.substring(start + 1, end - 1);
+	const leftPad = [...new Array(at - start)].map(i => ' ').join('');
+	return `${firstLine}\n${leftPad}^`;
+}
+
+function raise(
+	nodeType: TreePatternObject,
+	code: string,
+	at: number,
+	message: string
+): null {
+	const location = codeAt(code, at);
+	throw new Error(`Parsing ${nodeType.name}. ${message}\n${location}`);
 }
 
 export class Sequence {
@@ -67,7 +99,7 @@ export class Sequence {
             end: children[children.length - 1].end,
             children
         }) : (allowEmpty ? null : raise(
-			this, `At least one ${child.name} is required.`
+			this, code, at, `At least one ${child.name} is required.`
 		));
     }
 }
@@ -81,7 +113,9 @@ export class Union {
 		registry.set(name, this);
 	}
 
-    parse({code, at = 0}: {code: string, at?: number}): AST | null {
+    parse({code, at = 0, optional = undefined}: {code: string, at?: number, optional?: boolean}): AST | null {
+		const allowEmpty = typeof optional === 'boolean' ? optional : optional;
+
         for (const option of this.options) {
 			const child = typeof option === 'string' ?
 				registry.get(option) :
@@ -99,7 +133,16 @@ export class Union {
                 });
             }
         }
-        return null;
+
+		if (allowEmpty) {
+			return null;
+		} else {
+			raise(this, code, at, `Must be one of ${
+				this.options
+					.map(o => typeof o === 'string' ? o : o.name)
+					.join(', ')
+			}.`);
+		}
     }
 }
 
@@ -112,7 +155,7 @@ export class Recipe {
 		registry.set(name, this);
 	}
 
-    parse({code, at = 0}: {code: string, at?: number}): AST | null {
+    parse({code, at = 0, optional = undefined}: {code: string, at?: number, optional?: boolean}): AST | null {
         const children: AST[] = [];
 
         for (const option of this.children) {
@@ -155,7 +198,7 @@ export class Token {
 		registry.set(name, this);
 	}
 
-    parse({code, at = 0}: {code: string, at?: number}): AST | null {
+    parse({code, at = 0, optional = undefined}: {code: string, at?: number, optional?: boolean}): AST | null {
         const matched = this.pattern.exec(code.substring(at));
         return (matched && matched.index === 0) ? new AST({
             type: this.name,
