@@ -52,9 +52,17 @@ function codeAt(
 		i--;
 	}
 
-	const firstLine = code.substring(start + 1, end - 1);
-	const leftPad = [...new Array(at - start)].map(i => ' ').join('');
-	return `${firstLine}\n${leftPad}^`;
+	false && console.log({
+		before: code.substring(0, at),
+		at,
+		after: code.substring(at)
+	});
+
+	const lineLabel = `line ${lineNumber}: `;
+	const codeline = code.substring(start + 1, end);
+	const indicatorIndent = (1 + at - start) + lineLabel.length;
+	const indicatorPad = [...new Array(indicatorIndent)].map(i => ' ').join('');
+	return `${lineLabel}${codeline}\n${indicatorPad}^`;
 }
 
 function raise(
@@ -64,7 +72,7 @@ function raise(
 	message: string
 ): null {
 	const location = codeAt(code, at);
-	throw new Error(`Parsing ${nodeType.name}. ${message}\n${location}`);
+	throw new Error(`Expected ${nodeType.name}. ${message}\n${location}`);
 }
 
 export class Sequence {
@@ -84,12 +92,12 @@ export class Sequence {
 			this.child
 		;
 
-		const allowEmpty = typeof optional === 'boolean' ? optional : optional;
+		const allowEmpty = typeof optional === 'boolean' ? optional : this.optional;
 
         let subtree = child.parse({code, at});
         while (subtree) {
             children.push(subtree);
-            subtree = child.parse({code, at: subtree.end});
+            subtree = child.parse({code, at: subtree.end, optional: true});
         }
 
         return children.length > 0 ? new AST({
@@ -114,15 +122,14 @@ export class Union {
 	}
 
     parse({code, at = 0, optional = undefined}: {code: string, at?: number, optional?: boolean}): AST | null {
-		const allowEmpty = typeof optional === 'boolean' ? optional : optional;
+		const allowEmpty = typeof optional === 'boolean' ? optional : this.optional;
 
         for (const option of this.options) {
 			const child = typeof option === 'string' ?
-				registry.get(option) :
-				option
-			;
+				registry.get(option) : option;
 
-            const parsed = child.parse({code, at});
+            const parsed = child.parse({code, at, optional: true});
+			// console.log({code: code.substring(at, at + 5), child, parsed});
             if (parsed) {
                 return new AST({
                     type: this.name,
@@ -157,23 +164,41 @@ export class Recipe {
 
     parse({code, at = 0, optional = undefined}: {code: string, at?: number, optional?: boolean}): AST | null {
         const children: AST[] = [];
+		const allowEmpty = typeof optional === 'boolean' ? optional : this.optional;
 
-        for (const option of this.children) {
-			const child = typeof option === 'string' ?
-				registry.get(option) :
-				option
-			;
+		let option;
+		let lastAt = at;
+		let child;
 
-            const parsed = child.parse({
-                code,
-                at: children.length > 0 ? children[children.length - 1].end : at
-            });
-            if (parsed) {
-                children.push(parsed);
-            } else if (!child.optional) {
-                return null;
-            }
-        }
+		try {
+			for (option of this.children) {
+				child = typeof option === 'string' ?
+					registry.get(option) :
+					option
+				;
+
+				const _at = children.length > 0 ?
+						children[children.length - 1].end : at
+
+				const parsed = child.parse({
+					code,
+					at: _at
+				});
+
+				if (parsed) {
+					children.push(parsed);
+					lastAt = _at;
+				}
+			}
+		} catch (err) {
+			if (allowEmpty) {
+				return null;
+			} else {
+				// console.log(err, code, _at);
+				// raise(this, code, lastAt, `Expected ${child.name}`);
+				throw err;
+			}
+		}
 
         return new AST({
             type: this.name,
