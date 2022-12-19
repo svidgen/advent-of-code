@@ -24,12 +24,17 @@ const VALUE = new Union("VALUE", [ NAME, NUMBER ]);
 
 const EXPRESSION = new Union(
 	"EXPRESSION",
-	[ NAME, VALUE, "OPERATION" ]
+	[ "OPERATION", NAME, VALUE ]
+);
+
+const OPERAND = new Union(
+	"OPERAND",
+	[ NAME, VALUE ]
 );
 
 const OPERATION = new Recipe(
 	"OPERATION",
-	[ EXPRESSION, WHITESPACE, OPERATOR, WHITESPACE, EXPRESSION ]
+	[ OPERAND, WHITESPACE, OPERATOR, WHITESPACE, OPERAND ]
 );
 
 const ASSIGNMENT = new Recipe(
@@ -57,20 +62,13 @@ const ITEMS_DEFINITION = new Recipe(
 	]
 );
 
-const LIST_ITEM_SEPARATOR = new Token("LIST_ITEM_SEPARATOR", /^,/, true);
+const LIST_ITEM_SEPARATOR = new Token("LIST_ITEM_SEPARATOR", /^\s*,\s*/, true);
 
-const VALUE_LIST_ITEM = new Recipe(
-	"VALUE_LIST_ITEM",
-	[
-		WHITESPACE,
-		LIST_ITEM_SEPARATOR,
-		WHITESPACE,
-		VALUE,
-		WHITESPACE
-	]
+const VALUE_LIST = new Sequence(
+	"VALUE_LIST",
+	VALUE,
+	LIST_ITEM_SEPARATOR
 );
-
-const VALUE_LIST = new Sequence("VALUE_LIST", VALUE_LIST_ITEM);
 
 const STATEMENT = new Recipe("STATEMENT", [
     new Union("NOISE", [WHITESPACE, EOS]),
@@ -110,6 +108,6 @@ const MONKEY = new Recipe(
 	]
 );
 
-const GAME = new Sequence("GAME", MONKEY);
+const GAME = new Sequence("GAME", MONKEY, WHITESPACE, false);
 
 export default GAME;
