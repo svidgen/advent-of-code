@@ -5,4 +5,4 @@ const ast = MonkeyScript.parse({
 	code: readFileSync(0, 'utf-8').trim()
 });
 
-console.dir(ast, { depth: null });
+console.dir(ast, { depth: 2 });

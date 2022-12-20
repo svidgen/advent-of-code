@@ -129,16 +129,19 @@ export class Sequence {
 
 		while (subtree) {
 			children.push(subtree);
-			const delimiter = Delimiter.parse({
-				code,
-				at: subtree.end,
-				breadcrumbs: [...breadcrumbs, this],
-				optional: true
-			});
-			if (!delimiter) break;
+			let delimiter;
+			if (Delimiter) {
+				delimiter = Delimiter.parse({
+					code,
+					at: subtree.end,
+					breadcrumbs: [...breadcrumbs, this],
+					optional: true
+				});
+				if (!delimiter) break;
+			}
 			subtree = child.parse({
 				code,
-				at: delimiter.end,
+				at: (delimiter || subtree).end,
 				breadcrumbs: [...breadcrumbs, this],
 				optional: true
 			});
