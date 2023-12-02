@@ -82,6 +82,17 @@ function part1(): number {
 	return games.reduce((sum, game) => game!.id + sum, 0);
 }
 
+function part2(): number {
+	const games = lines
+		.filter(x => x)
+		.map(line => Game.parse(line)) as Game[];
+
+	const powers = games.map(g => g.max('red') * g.max('green') * g.max('blue'));
+
+	return powers.reduce((sum, power) => sum + power, 0);
+}
+
 console.log({
-	part1: part1()
+	part1: part1(),
+	part2: part2()
 });
