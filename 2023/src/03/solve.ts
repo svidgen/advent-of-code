@@ -60,6 +60,21 @@ function partLocations() {
 }
 
 /**
+ * Locations of all indicators for gears (`*`) specifically.
+ */
+function gearLocations() {
+	const locations: Location[] = [];
+	for (let y = 0; y < lines.length; y++) {
+		for (let x = 0; x < lines[y].length; x++) {
+			if (charAt(x, y) === '*') {
+				locations.push({x, y});
+			}
+		}
+	}
+	return locations;
+}
+
+/**
  * Given an [x, y] coord, searches all adjacent (including diagonal) locations
  * for part numbers.
  */
@@ -84,9 +99,19 @@ function part1() {
 		.map(loc => numbersAround(loc.x, loc.y))
 		.reduce((agg, item) => agg.concat(item), [] as number[])
 	;
-	console.log(sum(numbers));
+	return sum(numbers);
+}
+
+function part2() {
+	const gears = gearLocations();
+	const ratiosIguess = gears.map(loc => {
+		const [a, b] = numbersAround(loc.x, loc.y) as [number, number | undefined];
+		return a && b ? a * b : 0;
+	});
+	return sum(ratiosIguess);
 }
 
 console.log({
 	part1: part1(),
+	part2: part2()
 });
