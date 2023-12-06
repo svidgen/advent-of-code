@@ -45,13 +45,13 @@ class Race {
 
 const races = Race.parse(lines);
 
-function part1() {
+function solve() {
 	const winners = races.map(r => r.winners.length);
 	console.log(winners);
 	return winners.reduce((product, v) => product * v, 1);
 }
 
 console.log({
-	part1: part1()
+	solution: solve()
 });
 
