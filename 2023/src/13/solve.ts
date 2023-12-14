@@ -18,6 +18,16 @@ function bitmap(str: string | string[], chr: string): number {
 	return b;
 }
 
+function countBits(v: number): number {
+	let count = 0;
+	let n = v;
+	while (n) {
+		count += n & 1;
+		n = n >> 1;
+	}
+	return count;
+}
+
 type Coord = {
 	x: number;
 	y: number;
@@ -99,12 +109,12 @@ class Grid {
 	}
 }
 
-function mirrorIndex(values: number[]): number {
+function mirrorIndex(values: number[], smudges: number): number {
 	// console.log('mirrorIndex', values);
 	for (let i = 1; i < values.length; i++) {
 		const left = values.slice(0, i);
 		const right = values.slice(i, values.length);
-		if (areReflections(left, right)) {
+		if (areReflections(smudges, left, right)) {
 			return i;
 		}
 	}
@@ -113,27 +123,38 @@ function mirrorIndex(values: number[]): number {
 	return 0;
 }
 
-function areReflections(left: number[], right: number[]): boolean {
+function areReflections(smudges: number, left: number[], right: number[]): boolean {
+	let result = 0;
 	const length = Math.min(left.length, right.length);
-	// console.log('comparing', left, right, length);
 	for (let i = 0; i < length; i++) {
-		if (left[(left.length - 1) - i] !== right[i]) {
-			return false;
-		}
+		const leftValue = left[(left.length - 1) - i];
+		const rightValue = right[i];
+		const diff = leftValue ^ rightValue;
+		const bitdiff = countBits(diff);
+		result += bitdiff;
+		// console.log('comparing bits')
+		// console.log(leftValue.toString(2));
+		// console.log(rightValue.toString(2));
+		// console.log('= ', bitdiff);
 	}
-	return true;
+	// console.log('comparing', left, right, result);
+	return result === smudges;
 }
 
 const grids: Grid[] = Grid.parse(lines);
 
 const part1 = (() => {
-	const v = sum(grids.map(g => mirrorIndex(g.verticals)));
-	const h = sum(grids.map(g => mirrorIndex(g.horizontals) * 100));
+	const v = sum(grids.map(g => mirrorIndex(g.verticals, 0)));
+	const h = sum(grids.map(g => mirrorIndex(g.horizontals, 0) * 100));
 	const total = v + h;
 	return { v, h, total };
 })();
 
 const part2 = (() => {
+	const v = sum(grids.map(g => mirrorIndex(g.verticals, 1)));
+	const h = sum(grids.map(g => mirrorIndex(g.horizontals, 1) * 100));
+	const total = v + h;
+	return { v, h, total };
 })();
 
 console.log(JSON.stringify({part1, part2}, null, 2));
