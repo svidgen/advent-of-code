@@ -14,6 +14,13 @@ export type Coord = {
 	y: number;
 }
 
+export enum Direction {
+	north = 'north',
+	south = 'south',
+	east = 'east',
+	west = 'west',
+}
+
 export class Grid<T> {
 	data: T[][] = []; // in [y][x] orientation
 	width: number = 0;
@@ -27,6 +34,21 @@ export class Grid<T> {
 
 	static parse(lines: string[]): Grid<string> {
 		const data = lines.map(line => line.split('')); 
+		return new Grid(data);
+	}
+
+	static fromDimensions<T>(
+		width: number,
+		height: number,
+		initialize: (x: number, y: number) => T = String
+	): Grid<T> {
+		const data: T[][] = Array<T[]>(height);;
+		for (let y = 0; y < height; y++) {
+			data[y] = Array<T>(width);
+			for (let x = 0; x < width; x++) {
+				data[y] = initialize(x, y);
+			}
+		}
 		return new Grid(data);
 	}
 
