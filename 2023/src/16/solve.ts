@@ -1,10 +1,16 @@
 import { lines, Grid, Direction, Coord } from '../common';
 
 class Cursor {
+	coord: Coord;
+	direction: Direction;
+
 	constructor(
-		public coord: Coord,
-		public direction: Direction
-	) {}
+		coord: Coord,
+		direction: Direction
+	) {
+		this.coord = {...coord};
+		this.direction = direction;
+	}
 
 	step() {
 		switch (this.direction) {
@@ -74,8 +80,12 @@ class StepTracer<T> {
 	}
 
 	run() {
-		while (this.cursors.length > 0) {
+		let steps = 0;
+		while (this.cursors.length > 0 && steps < 1_000) {
 			this.step();
+			console.log('state');
+			console.log(this.state.toString());
+			steps++;
 		}
 	}
 }
@@ -83,26 +93,28 @@ class StepTracer<T> {
 const grid = Grid.parse(lines);
 
 const tracer = new StepTracer(grid, (t, c) => {
-	t.state.set(c.coord, '#');
-	
 	if (!grid.includes(c.coord)) {
 		t.remove(c)
 		return;
 	}
+
+	t.state.set(c.coord, '#');
+	c.step();
 
 	const value = t.grid.get(c.coord)!;
 	const action = ({
 		'|': () => {
 			if (c.isEastWest) {
 				t.remove(c);
-				t.add(new Cursor({x: c.coord.x, y: c.coord.y + 1}, Direction.north));
-				t.add(new Cursor({x: c.coord.x, y: c.coord.y - 1}, Direction.south));
+				t.add(new Cursor(c.coord, Direction.south));
+				t.add(new Cursor(c.coord, Direction.north));
 			}
 		},
 		'-': () => {
 			if (c.isNorthSouth) {
-				t.add(new Cursor({x: c.coord.x - 1, y: c.coord.y}, Direction.west));
-				t.add(new Cursor({x: c.coord.x + 1, y: c.coord.y}, Direction.east));
+				t.remove(c);
+				t.add(new Cursor(c.coord, Direction.west));
+				t.add(new Cursor(c.coord, Direction.east));
 			}
 		},
 		'/': () => {
@@ -114,6 +126,7 @@ const tracer = new StepTracer(grid, (t, c) => {
 			})[c.direction];
 		},
 		'\\': () => {
+			console.log('bounding neg 45')
 			c.direction = ({
 				[Direction.north]: Direction.west,
 				[Direction.south]: Direction.east,
@@ -122,8 +135,11 @@ const tracer = new StepTracer(grid, (t, c) => {
 			})[c.direction];
 		}
 	})[value];
-	action && action();
+	if (action) action();
 });
 
+tracer.add(new Cursor({x: 0, y: 0}, Direction.east));
 tracer.run();
-console.log(tracer.grid.toString(), tracer.state.toString());
+
+console.log(tracer.grid.toString());
+console.log(tracer.state.toString());
