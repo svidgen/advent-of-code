@@ -1,5 +1,9 @@
 import { lines, Grid, Direction, Coord } from '../common';
 
+async function pause(s: number) {
+	return new Promise(unsleep => setTimeout(unsleep, s));
+}
+
 class Cursor {
 	coord: Coord;
 	direction: Direction;
@@ -24,7 +28,7 @@ class Cursor {
 				this.coord.x++;
 				break;
 			case Direction.west:
-				this.coord.y--;
+				this.coord.x--;
 				break;
 			default:
 				throw new Error('Bad direction!');
@@ -56,7 +60,7 @@ class StepTracer<T> {
 		public grid: Grid<T>,
 		public cursorStep: CursorStep<T>
 	) {
-		this.state = Grid.fromDimensions(grid.width, grid.height, () => ".");
+		this.state = Grid.fromDimensions(grid.width, grid.height, () => " ");
 	}
 
 	add(cursor: Cursor) {
@@ -79,12 +83,19 @@ class StepTracer<T> {
 		}
 	}
 
-	run() {
+	async run() {
 		let steps = 0;
 		while (this.cursors.length > 0 && steps < 1_000) {
 			this.step();
-			console.log('state');
+
+			/*
+			await pause(300);
+			console.log('');
+			console.log(`Step ${steps}`);
 			console.log(this.state.toString());
+			console.log();
+			*/
+
 			steps++;
 		}
 	}
@@ -100,6 +111,15 @@ const tracer = new StepTracer(grid, (t, c) => {
 
 	t.state.set(c.coord, '#');
 	c.step();
+
+	/*
+	t.state.set(c.coord, ({
+		[Direction.north]: '^',
+		[Direction.south]: 'v',
+		[Direction.east]: '>',
+		[Direction.west]: '<',
+	})[c.direction]);
+	*/
 
 	const value = t.grid.get(c.coord)!;
 	const action = ({
@@ -126,7 +146,6 @@ const tracer = new StepTracer(grid, (t, c) => {
 			})[c.direction];
 		},
 		'\\': () => {
-			console.log('bounding neg 45')
 			c.direction = ({
 				[Direction.north]: Direction.west,
 				[Direction.south]: Direction.east,
@@ -138,8 +157,10 @@ const tracer = new StepTracer(grid, (t, c) => {
 	if (action) action();
 });
 
-tracer.add(new Cursor({x: 0, y: 0}, Direction.east));
-tracer.run();
+(async () => {
+	tracer.add(new Cursor({x: 0, y: 0}, Direction.east));
+	await tracer.run();
 
-console.log(tracer.grid.toString());
-console.log(tracer.state.toString());
+	console.log(tracer.grid.toString());
+	console.log(tracer.state.toString());
+})();
