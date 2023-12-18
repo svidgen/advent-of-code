@@ -10,7 +10,7 @@ class Cursor {
 
 	constructor(
 		coord: Coord,
-		direction: Direction
+		direction: Direction,
 	) {
 		this.coord = {...coord};
 		this.direction = direction;
@@ -53,14 +53,14 @@ type CursorStep<T> = (tracer: StepTracer<T>, coord: Cursor) => void;
 
 class StepTracer<T> {
 	cursors: Cursor[] = [];
-	state: Grid<string>;
+	state: Grid<string[]>;
 	log: any[] = [];
 
 	constructor(
 		public grid: Grid<T>,
 		public cursorStep: CursorStep<T>
 	) {
-		this.state = Grid.fromDimensions(grid.width, grid.height, () => " ");
+		this.state = Grid.fromDimensions(grid.width, grid.height, () => [] as string[]);
 	}
 
 	add(cursor: Cursor) {
@@ -85,7 +85,7 @@ class StepTracer<T> {
 
 	async run() {
 		let steps = 0;
-		while (this.cursors.length > 0 && steps < 1_000) {
+		while (this.cursors.length > 0 && steps < 1_000_000) {
 			this.step();
 
 			/*
@@ -109,17 +109,12 @@ const tracer = new StepTracer(grid, (t, c) => {
 		return;
 	}
 
-	t.state.set(c.coord, '#');
-	c.step();
-
-	/*
-	t.state.set(c.coord, ({
-		[Direction.north]: '^',
-		[Direction.south]: 'v',
-		[Direction.east]: '>',
-		[Direction.west]: '<',
-	})[c.direction]);
-	*/
+	const state = t.state.get(c.coord)!;
+	if (state.includes(c.direction)) {
+		t.remove(c);
+	} else {
+		state.push(c.direction);
+	}
 
 	const value = t.grid.get(c.coord)!;
 	const action = ({
@@ -155,12 +150,22 @@ const tracer = new StepTracer(grid, (t, c) => {
 		}
 	})[value];
 	if (action) action();
+	c.step();
 });
 
 (async () => {
 	tracer.add(new Cursor({x: 0, y: 0}, Direction.east));
 	await tracer.run();
 
-	console.log(tracer.grid.toString());
-	console.log(tracer.state.toString());
+	const visited = tracer.state.reduce((sum, cellState) => {
+		if (cellState.length > 0) sum++;
+		return sum;
+	}, 0);
+
+	console.log(tracer.grid.map((data, coord) => {
+		const state = tracer.state.get(coord)!;
+		return (data === '.' && state.length > 0) ? state[0] : data;
+	}).toString());
+
+	console.log('part1', visited);
 })();

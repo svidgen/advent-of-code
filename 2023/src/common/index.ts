@@ -14,11 +14,13 @@ export type Coord = {
 	y: number;
 }
 
+export type DataCoord<T> = Coord & { data: T };
+
 export enum Direction {
-	north = 'north',
-	south = 'south',
-	east = 'east',
-	west = 'west',
+	north = '↑',
+	south = '↓',
+	east = '→',
+	west = '←',
 }
 
 export class Grid<T> {
@@ -135,6 +137,36 @@ export class Grid<T> {
 		for (let y = 0; y < this.height; y++) {
 			this.setHorizontal(y, h[y]);
 		}
+	}
+
+	private *_coords() {
+		for (let y = 0; y < this.height; y++) {
+			for (let x = 0; x < this.width; x++) {
+				yield {x, y};
+			}
+		}
+	}
+
+	get coords() {
+		return this._coords();
+	}
+
+	reduce<RT>(fn: (accumulator: RT, currentValue: T, coord: Coord) => RT, init: RT) {
+		let acc = init;
+		for (const coord of this.coords) {
+			acc = fn(acc, this.get(coord)!, coord);
+		}
+		return acc;
+	}
+
+	map<RT>(fn: (currentValue: T, coord: Coord) => RT): Grid<RT> {
+		const data: RT[][] = [];
+		for (const coord of this.coords) {
+			const mapped = fn(this.get(coord)!, coord);
+			data[coord.y] = data[coord.y] || [];
+			data[coord.y][coord.x] = mapped;
+		}
+		return new Grid(data);
 	}
 
 	toString(map: (item: T) => string = String) {
