@@ -1,5 +1,5 @@
-const fs = require('fs');
-const process = require('process');
+import * as fs from 'fs';
+import * as process from 'process';
 export const raw = fs.readFileSync(process.argv[2], 'utf-8');
 export const lines = raw.trim().split(/\n/);
 
@@ -37,16 +37,17 @@ export class Grid<T> {
 		return new Grid(data);
 	}
 
-	static fromDimensions<T>(
+	static fromDimensions<T = string>(
 		width: number,
 		height: number,
-		initialize: (x: number, y: number) => T = String
+		initialize?: (x: number, y: number) => T
 	): Grid<T> {
+		const _initialize = (initialize ?? (() => "")) as (x: number, y: number) => T;
 		const data: T[][] = Array<T[]>(height);;
 		for (let y = 0; y < height; y++) {
 			data[y] = Array<T>(width);
 			for (let x = 0; x < width; x++) {
-				data[y] = initialize(x, y);
+				data[y][x] = _initialize(x, y);
 			}
 		}
 		return new Grid(data);
@@ -58,6 +59,15 @@ export class Grid<T> {
 
 	calculateWidth() {
 		return Math.max(...this.data.map(row => row.length));
+	}
+
+	includes(coord: Coord): boolean {
+		return (
+			coord.x >= 0 &&
+			coord.x < this.width &&
+			coord.y >= 0 &&
+			coord.y < this.height
+		);
 	}
 
 	get(coord: Coord): T | undefined {

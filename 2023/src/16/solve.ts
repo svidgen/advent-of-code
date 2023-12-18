@@ -1,10 +1,5 @@
 import { lines, Grid, Direction, Coord } from '../common';
 
-type TracerAction<T> = (
-	tracer: StepTracer<T>,
-	cursor: Cursor,
-) => void;
-
 class Cursor {
 	constructor(
 		public coord: Coord,
@@ -44,18 +39,18 @@ class Cursor {
 	}
 }
 
-type TracerRules = Record<string, TracerAction>;
+type CursorStep<T> = (tracer: StepTracer<T>, coord: Cursor) => void;
 
 class StepTracer<T> {
 	cursors: Cursor[] = [];
-	tracker: Grid<string>;
+	state: Grid<string>;
 	log: any[] = [];
 
-	constructor<T>(
+	constructor(
 		public grid: Grid<T>,
-		public rules: TracerRules
+		public cursorStep: CursorStep<T>
 	) {
-		this.tracker(grid.width, grid.height, () => ".");
+		this.state = Grid.fromDimensions(grid.width, grid.height, () => ".");
 	}
 
 	add(cursor: Cursor) {
@@ -64,7 +59,7 @@ class StepTracer<T> {
 
 	remove(cursor: Cursor) {
 		this.cursors.splice(
-			this.cursors.findIndex(cursor),
+			this.cursors.findIndex(c => c === cursor),
 			1
 		);
 	}
@@ -74,70 +69,61 @@ class StepTracer<T> {
 		// are not part of the current step.
 		const cursors = [...this.cursors];
 		for (const cursor of cursors) {
-			this
+			this.cursorStep(this, cursor);
+		}
+	}
+
+	run() {
+		while (this.cursors.length > 0) {
+			this.step();
 		}
 	}
 }
 
 const grid = Grid.parse(lines);
 
-const tracer = new StepTracer(grid, {
-	'.': (t,c) => {
-		t.tracker.set(c.coord, '#');
-	},
-	'|': (t,c) => {
-		t.tracker.set(c.coord, '#');
-		if (c.isEastWest) {
-			t.remove(c);
-			t.add(new Cursor({x: c.x, y: c.y + 1, direction: Direction.north}));
-			t.add(new Cursor({x: c.x, y: c.y - 1, direction: Direction.south}));
-		}
-	},
-	'-': (t,c) => {
-		t.tracker.set(c.coord, '#');
-		if (c.isNorthSouth) {
-			t.add(new Cursor({x: c.x - 1, y: c.y, direction: Direction.west}));
-			t.add(new Cursor({x: c.x + 1, y: c.y, direction: Direction.east}));
-		}
-	},
-	'/': (t,c) => {
-		t.tracker.set(c.coord, '#');
-		switch (c.direction) {
-			case Direction.north:
-				c.direction = Direction.east;
-				break;
-			case Direction.south:
-				c.direction = Direction.west;
-				break;
-			case Direction.east:
-				c.direction = Direction.north;
-				break;
-			case Direction.west:
-				c.direction = Direction.south;
-				break;
-			default:
-				throw new Error("Invalid direction");
-		}
-	},
-	'\\': (t,c) => {
-		t.tracker.set(c.coord, '#');
-		switch (c.direction) {
-			case Direction.north:
-				c.direction = Direction.west;
-				break;
-			case Direction.south:
-				c.direction = Direction.east;
-				break;
-			case Direction.east:
-				c.direction = Direction.south;
-				break;
-			case Direction.west:
-				c.direction = Direction.north;
-				break;
-			default:
-				throw new Error("Invalid direction");
-		}
+const tracer = new StepTracer(grid, (t, c) => {
+	t.state.set(c.coord, '#');
+	
+	if (!grid.includes(c.coord)) {
+		t.remove(c)
+		return;
 	}
+
+	const value = t.grid.get(c.coord)!;
+	const action = ({
+		'|': () => {
+			if (c.isEastWest) {
+				t.remove(c);
+				t.add(new Cursor({x: c.coord.x, y: c.coord.y + 1}, Direction.north));
+				t.add(new Cursor({x: c.coord.x, y: c.coord.y - 1}, Direction.south));
+			}
+		},
+		'-': () => {
+			if (c.isNorthSouth) {
+				t.add(new Cursor({x: c.coord.x - 1, y: c.coord.y}, Direction.west));
+				t.add(new Cursor({x: c.coord.x + 1, y: c.coord.y}, Direction.east));
+			}
+		},
+		'/': () => {
+			c.direction = ({
+				[Direction.north]: Direction.east,
+				[Direction.south]: Direction.west,
+				[Direction.east]: Direction.north,
+				[Direction.west]: Direction.south
+			})[c.direction];
+		},
+		'\\': () => {
+			c.direction = ({
+				[Direction.north]: Direction.west,
+				[Direction.south]: Direction.east,
+				[Direction.east]: Direction.south,
+				[Direction.west]: Direction.north
+			})[c.direction];
+		}
+	})[value];
+	action && action();
 });
 
-
+tracer.run();
+console.log(tracer.grid.toString(), tracer.state.toString());
