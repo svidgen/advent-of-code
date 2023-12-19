@@ -176,3 +176,100 @@ export class Grid<T> {
 	}
 }
 
+export class Cursor {
+	coord: Coord;
+	direction: Direction;
+
+	constructor(
+		coord: Coord,
+		direction: Direction,
+	) {
+		this.coord = {...coord};
+		this.direction = direction;
+	}
+
+	step() {
+		switch (this.direction) {
+			case Direction.north:
+				this.coord.y--;
+				break;
+			case Direction.south:
+				this.coord.y++;
+				break;
+			case Direction.east:
+				this.coord.x++;
+				break;
+			case Direction.west:
+				this.coord.x--;
+				break;
+			default:
+				throw new Error('Bad direction!');
+				break;
+		}
+	}
+
+	get isEastWest() {
+		return this.direction === Direction.east ||
+			this.direction === Direction.west
+		;
+	}
+
+	get isNorthSouth() {
+		return this.direction === Direction.north ||
+			this.direction === Direction.south
+		;
+	}
+}
+
+export type CursorStep<T, ST> = (tracer: StepTracer<T, ST>, coord: Cursor) => void;
+
+export class StepTracer<T, StateType = string> {
+	cursors: Cursor[] = [];
+	state: Grid<StateType>;
+	log: any[] = [];
+
+	constructor(
+		public grid: Grid<T>,
+		public stateInit: (x: number, y: number) => StateType,
+		public cursorStep: CursorStep<T, StateType>,
+		public maxSteps: number = 1_000_000,
+	) {
+		this.reset();
+	}
+
+	reset() {
+		this.log = [];
+		this.state = Grid.fromDimensions(this.grid.width, this.grid.height, this.stateInit);
+		this.cursors = [];
+	}
+
+	add(cursor: Cursor) {
+		this.cursors.push(cursor);
+	}
+
+	remove(cursor: Cursor) {
+		this.cursors.splice(
+			this.cursors.findIndex(c => c === cursor),
+			1
+		);
+	}
+
+	step() {
+		// cursors might add or remove cursors as we go. but, these additions
+		// are not part of the current step.
+		const cursors = [...this.cursors];
+		for (const cursor of cursors) {
+			this.cursorStep(this, cursor);
+		}
+	}
+
+	async run() {
+		let steps = 0;
+		while (this.cursors.length > 0 && steps < this.maxSteps) {
+			this.step();
+			steps++;
+		}
+	}
+}
+
+
