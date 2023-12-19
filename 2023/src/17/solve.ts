@@ -4,21 +4,17 @@ const grid = Grid.parse(lines);
 
 const tracer = new StepTracer(
 	grid,
-	() => [] as string[],
-	(t, c) => {
-		if (!grid.includes(c.coord)) {
-			t.remove(c)
-			return;
-		}
+	() => 0,
+	(tracer, cursor) => {
+		const value = tracer.grid.get(c.coord)!;
+		const state = tracer.state.get(c.coord)!;
 
-		const state = t.state.get(c.coord)!;
 		if (state.includes(c.direction)) {
 			t.remove(c);
 		} else {
 			state.push(c.direction);
 		}
 
-		const value = t.grid.get(c.coord)!;
 		const action = ({
 			'|': () => {
 				if (c.isEastWest) {
@@ -96,7 +92,7 @@ const visited = (t) => t.state.reduce((sum, cellState) => {
 	];
 
 	const scores = origins.map((cursor, i) => {
-		const origin = {direction: cursor.direction, coord: {...cursor.coord}};
+		const origin = {...cursor, coord: {...cursor.coord}};
 		tracer.reset();
 		tracer.add(cursor);
 		tracer.run();

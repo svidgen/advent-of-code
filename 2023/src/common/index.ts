@@ -179,16 +179,23 @@ export class Grid<T> {
 export class Cursor {
 	coord: Coord;
 	direction: Direction;
+	path: Coord[] = [];
 
 	constructor(
 		coord: Coord,
 		direction: Direction,
+		path?: Coord[],
 	) {
 		this.coord = {...coord};
 		this.direction = direction;
+		if (path) {
+			this.path = path.map(p => ({...p}));
+		}
 	}
 
-	step() {
+	step(direction?: Direction) {
+		this.path.push({...this.coord});
+		if (direction) this.direction = direction;
 		switch (this.direction) {
 			case Direction.north:
 				this.coord.y--;
@@ -219,9 +226,17 @@ export class Cursor {
 			this.direction === Direction.south
 		;
 	}
+
+	toString() {
+		return JSON.stringify({
+			x: this.coord.x,
+			y: this.coord.y,
+			d: this.direction
+		});
+	}
 }
 
-export type CursorStep<T, ST> = (tracer: StepTracer<T, ST>, coord: Cursor) => void;
+export type CursorStep<T, ST> = (tracer: StepTracer<T, ST>, cursor: Cursor) => void;
 
 export class StepTracer<T, StateType = string> {
 	cursors: Cursor[] = [];
