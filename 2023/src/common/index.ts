@@ -176,25 +176,32 @@ export class Grid<T> {
 	}
 }
 
-export class Cursor {
+type CursorPath<T> = Pick<Cursor<T>, 'coord' | 'direction' | 'state'>;
+
+export class Cursor<T = any> {
 	coord: Coord;
 	direction: Direction;
-	path: Coord[] = [];
+	path: CursorPath<T>[] | undefined;
+	state: T | undefined;
 
 	constructor(
 		coord: Coord,
 		direction: Direction,
-		path?: Coord[],
+		state?: T,
+		path?: CursorPath<T>[] | undefined,
 	) {
 		this.coord = {...coord};
 		this.direction = direction;
-		if (path) {
-			this.path = path.map(p => ({...p}));
-		}
+		this.state = state;
+		if (path) this.path = path.map(p => ({...p}));
 	}
 
 	step(direction?: Direction) {
-		this.path.push({...this.coord});
+		this.path?.push({
+			coord: {...this.coord},
+			direction: this.direction,
+			state: this.state
+		});
 		if (direction) this.direction = direction;
 		switch (this.direction) {
 			case Direction.north:
@@ -227,6 +234,20 @@ export class Cursor {
 		;
 	}
 
+	copy({coord, direction, state, path}: {
+		coord?: Coord,
+		direction?: Direction,
+		state?: T,
+		path?: CursorPath<T>[],
+	}) {
+		return new Cursor<T>(
+			{...(coord || this.coord)},
+			direction || this.direction,
+			state ?? this.state,
+			path || this.path,
+		);
+	}
+
 	toString() {
 		return JSON.stringify({
 			x: this.coord.x,
@@ -240,6 +261,7 @@ export type CursorStep<T, ST> = (tracer: StepTracer<T, ST>, cursor: Cursor) => v
 
 export class StepTracer<T, StateType = string> {
 	cursors: Cursor[] = [];
+	removed: Set<Cursor> = new Set<Cursor>;
 	state: Grid<StateType>;
 	log: any[] = [];
 
@@ -256,6 +278,7 @@ export class StepTracer<T, StateType = string> {
 		this.log = [];
 		this.state = Grid.fromDimensions(this.grid.width, this.grid.height, this.stateInit);
 		this.cursors = [];
+		this.removed = new Set<Cursor>();
 	}
 
 	add(cursor: Cursor) {
@@ -263,26 +286,26 @@ export class StepTracer<T, StateType = string> {
 	}
 
 	remove(cursor: Cursor) {
-		this.cursors.splice(
-			this.cursors.findIndex(c => c === cursor),
-			1
-		);
+		this.removed.add(cursor);
 	}
 
 	step() {
 		// cursors might add or remove cursors as we go. but, these additions
 		// are not part of the current step.
-		const cursors = [...this.cursors];
+		const cursors = this.cursors.filter(c => !this.removed.has(c));
+		this.cursors = [];
 		for (const cursor of cursors) {
 			this.cursorStep(this, cursor);
 		}
+		this.cursors = this.cursors.concat(cursors);
 	}
 
-	async run() {
+	run(callback?: (steps: number) => any) {
 		let steps = 0;
 		while (this.cursors.length > 0 && steps < this.maxSteps) {
 			this.step();
 			steps++;
+			if (callback && callback(steps)) break;
 		}
 	}
 }

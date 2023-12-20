@@ -2,53 +2,88 @@ import { lines, Cursor, StepTracer, Grid, Direction, Coord } from '../common';
 
 const grid = Grid.parse(lines);
 
+const turns = {
+	[Direction.north]: [Direction.east, Direction.west],
+	[Direction.south]: [Direction.east, Direction.west],
+	[Direction.east]: [Direction.north, Direction.south],
+	[Direction.west]: [Direction.north, Direction.south],
+};
+
 const tracer = new StepTracer(
 	grid,
-	() => 0,
-	(tracer, cursor) => {
-		const value = tracer.grid.get(c.coord)!;
-		const state = tracer.state.get(c.coord)!;
+	() => ({
+		minCost: Number.MAX_SAFE_INTEGER,
+		visits: {} as Record<number, number>
+	}),
+	(tracer, truck) => {
+		truck.step();
+		truck.state.steps++;
 
-		if (state.includes(c.direction)) {
-			t.remove(c);
-		} else {
-			state.push(c.direction);
+		if (!tracer.grid.includes(truck.coord)) {
+			tracer.remove(truck);
+			return;
 		}
 
-		const action = ({
-			'|': () => {
-				if (c.isEastWest) {
-					t.remove(c);
-					t.add(new Cursor(c.coord, Direction.south));
-					t.add(new Cursor(c.coord, Direction.north));
-				}
-			},
-			'-': () => {
-				if (c.isNorthSouth) {
-					t.remove(c);
-					t.add(new Cursor(c.coord, Direction.west));
-					t.add(new Cursor(c.coord, Direction.east));
-				}
-			},
-			'/': () => {
-				c.direction = ({
-					[Direction.north]: Direction.east,
-					[Direction.south]: Direction.west,
-					[Direction.east]: Direction.north,
-					[Direction.west]: Direction.south
-				})[c.direction];
-			},
-			'\\': () => {
-				c.direction = ({
-					[Direction.north]: Direction.west,
-					[Direction.south]: Direction.east,
-					[Direction.east]: Direction.south,
-					[Direction.west]: Direction.north
-				})[c.direction];
-			}
-		})[value];
-		if (action) action();
-		c.step();
+		const cellValue = tracer.grid.get(truck.coord)!;
+		const cellState = tracer.state.get(truck.coord)!;
+
+		// console.log({truck, state: truck.state});
+		// tracer.remove(truck);
+		// return;
+
+		truck.state.cost += parseInt(cellValue);
+
+		// console.log({truck});
+		// tracer.remove(truck);
+		// return;
+
+		// due to eratic behavior, we need to let trucks keep working even
+		// if they're not currently the ideal path, because any given truck might
+		// visit a node "behind" the others, but have the advantage of having
+		// straight line movement left. for now, we're "buffering" for this.
+		if (
+			truck.state.cost >= cellState.minCost &&
+			cellState.exits
+			// || (cellState.visits[truck.state.cost] || 0) > 3
+		) {
+			// cursor is already losing. kill it.
+			tracer.remove(truck);
+			return;
+		}
+
+		cellState.minCost = Math.min(truck.state.cost, cellState.minCost);
+		cellState.visits[truck.state.cost]++;
+
+		if (
+			truck.coord.x === tracer.grid.width - 1
+			&& truck.coord.y === tracer.grid.height - 1
+		) {
+			// that's it. we've made it. remove self and log the truck/path.
+			tracer.log.push(truck);
+			tracer.remove(truck);
+			return;
+		} else {
+			// cursor keeps going, branching out into left/right directions
+			// as well.
+			for (const direction of turns[truck.direction]) {
+				const copied = truck.copy({
+					direction,
+					state: {
+						cost: truck.state.cost,
+						steps: 0
+					}
+				});
+				// console.log({lrTruck});
+				tracer.add(copied);
+			};
+		}
+
+		// AOC rule where a cursor must change directions after three steps.
+		// because we already spawned left/right child cursors above, we just
+		// have to remove the forward-going cursor at this point.
+		if (truck.state.steps === 3) {
+			tracer.remove(truck);
+		}
 	}
 );
 
@@ -58,50 +93,12 @@ const visited = (t) => t.state.reduce((sum, cellState) => {
 }, 0);
 
 (async () => {
-	tracer.add(new Cursor({x: 0, y: 0}, Direction.east));
-	tracer.run();
-	const part1 = visited(tracer);
-
-	/*
-	console.log(tracer.grid.map((data, coord) => {
-		const state = tracer.state.get(coord)!;
-		return (data === '.' && state.length > 0) ? state[0] : data;
-	}).toString());
-	*/
-
-	const width = tracer.grid.width;
-	const height = tracer.grid.height;
-
-	const origins = [
-		// west
-		...[...Array(height)].map(
-			(_, y) => new Cursor({x:0,  y}, Direction.east)
-		),
-		// north
-		...[...Array(width)].map(
-			(_, x) => new Cursor({x, y: 0}, Direction.south)
-		),
-		// east
-		...[...Array(height)].map(
-			(_, y) => new Cursor({x: width - 1, y}, Direction.west)
-		),
-		// south
-		...[...Array(width)].map(
-			(_, x) => new Cursor({x, y: height - 1}, Direction.north)
-		)
-	];
-
-	const scores = origins.map((cursor, i) => {
-		const origin = {...cursor, coord: {...cursor.coord}};
-		tracer.reset();
-		tracer.add(cursor);
-		tracer.run();
-		const v = visited(tracer);
-		console.log(`Processing ${i} (${JSON.stringify(origin)}) = ${v}`);
-		return v;
+	tracer.add(new Cursor({x: 0, y: 0}, Direction.east, {cost: 0, steps: 0}));
+	tracer.add(new Cursor({x: 0, y: 0}, Direction.south, {cost: 0, steps: 0}));
+	tracer.run((s) => {
+		console.log(`step: ${s}; cursors: ${tracer.cursors.length}`);
 	});
 
-	console.log('part 1', visited(tracer));
-	console.log('part 2', Math.max(...scores));
-
+	const score = Math.min(...tracer.log.map(l => l.state.cost))
+	console.log({score});
 })();
