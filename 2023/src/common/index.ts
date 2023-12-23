@@ -310,4 +310,87 @@ export class StepTracer<T, StateType = string> {
 	}
 }
 
+class Queue<T> {
+	items: T[] = [];
 
+	get isEmpty() {
+		return this.items.length > 0;
+	}
+
+	get size() {
+		return this.items.length;
+	}
+
+	enqueue(item: T) {
+		this.items.push(item);
+	}
+
+	dequeue(): T | undefined {
+		return this.items.shift();
+	}
+
+	clear() {
+		this.items = [];
+	}
+}
+
+const EMPTY = Number.POSITIVE_INFINITY;
+
+class PriorityQueue<T> {
+	buckets: T[][] = [];
+	min: number = EMPTY;
+	private _size: number = 0;
+
+	get isEmpty() {
+		return this.size === 0;
+	}
+
+	get size() {
+		return this._size;
+	}
+
+	enqueue(item: T, priority: number) {
+		this.buckets[priority] = this.buckets[priority] || [];
+		this.buckets[priority].push(item);
+		this._size++;
+		if (priority < this.min) this.min = priority;
+	}
+
+	dequeue(): T | undefined {
+		if (this.isEmpty) return;
+
+		let item: T | undefined;
+		while (!item && this.min < this.buckets.length) {
+			const bucket = this.buckets[this.min];
+			const item = bucket.shift();
+			this.min++;
+		}
+
+		this._size--;
+		return item;
+	}
+}
+
+type Prioritized = {
+	priority: number;
+}
+
+class GoodPriorityQueue<T extends Prioritized> extends Queue<T> {
+	private q = new PriorityQueue<T>();
+
+	get isEmpty() {
+		return this.q.isEmpty;
+	}
+
+	get size() {
+		return this.q.size;
+	}
+
+	enqueue(item: T) {
+		this.q.enqueue(item, item.priority);
+	}
+
+	dequeue() {
+		return this.q.dequeue();
+	}
+}
