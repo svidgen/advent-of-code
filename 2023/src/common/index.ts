@@ -363,7 +363,7 @@ export class Queue<T> {
 const EMPTY = Number.POSITIVE_INFINITY;
 
 export class PriorityQueue<T> {
-	buckets: T[][] = [];
+	buckets: Queue<T>[] = [];
 	min: number = EMPTY;
 	private _size: number = 0;
 
@@ -377,8 +377,8 @@ export class PriorityQueue<T> {
 
 	enqueue(item: T, priority: number) {
 		const p = Math.max(0, Math.floor(priority));
-		this.buckets[p] = this.buckets[p] || [];
-		this.buckets[p].push(item);
+		this.buckets[p] = this.buckets[p] || new Queue<T>();
+		this.buckets[p].enqueue(item);
 		this._size++;
 		this.min = Math.min(p, this.min);
 	}
@@ -390,8 +390,8 @@ export class PriorityQueue<T> {
 		while (!item) {
 			const bucket = this.buckets[this.min];
 			if (!!bucket) {
-				item = bucket.shift();
-				if (bucket.length === 0) this.min++;
+				item = bucket.dequeue();
+				if (bucket.size === 0) this.min++;
 			} else {
 				this.min++;
 			}
