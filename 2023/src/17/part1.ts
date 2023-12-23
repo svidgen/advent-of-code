@@ -93,11 +93,13 @@ function step(truck: Truck) {
 
 // hueristical cost function
 function cost(truck: Truck): number {
+	/*
 	const distance = Math.sqrt(
 		Math.pow((grid.width + 1 - truck.coord.x), 2)
 		+ Math.pow((grid.height + 1 - truck.coord.y), 2)
 	);
-	return truck.state.cost * distance;
+	*/
+	return truck.state.cost; // * distance;
 }
 
 //
