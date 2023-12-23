@@ -9,6 +9,8 @@ const turns = {
 	[Direction.west]: [Direction.north, Direction.south],
 };
 
+let bestFinalPathCost = Number.MAX_SAFE_INTEGER;
+
 const tracer = new StepTracer(
 	grid,
 	() => ({
@@ -42,8 +44,8 @@ const tracer = new StepTracer(
 		// visit a node "behind" the others, but have the advantage of having
 		// straight line movement left. for now, we're "buffering" for this.
 		if (
-			truck.state.cost >= cellState.minCost &&
-			cellState.exits
+			truck.state.cost > cellState.minCost + 3
+			|| truck.state.cost >= bestFinalPathCost
 			// || (cellState.visits[truck.state.cost] || 0) > 3
 		) {
 			// cursor is already losing. kill it.
@@ -59,6 +61,7 @@ const tracer = new StepTracer(
 			&& truck.coord.y === tracer.grid.height - 1
 		) {
 			// that's it. we've made it. remove self and log the truck/path.
+			bestFinalPathCost = Math.min(bestFinalPathCost, truck.state.cost);
 			tracer.log.push(truck);
 			tracer.remove(truck);
 			return;
