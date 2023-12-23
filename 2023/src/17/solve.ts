@@ -1,8 +1,26 @@
-import { lines, Cursor, StepTracer, Grid, Direction, Coord } from '../common';
+import { 
+	lines,
+	PriorityQueue,
+	Coord,
+	Cursor,
+	Direction,
+	Grid,
+} from '../common';
+
+type Truck = Cursor<{cost: number; steps: number}>;
 
 const grid = Grid.parse(lines);
+const state = Grid.fromDimensions(
+	grid.width,
+	grid.height,
+	() => ({
+		minCost: Number.MAX_SAFE_INTEGER,
+		visits: {} as Record<string, number>
+	})
+);
+const cursors = new PriorityQueue<Truck>();
 
-const turns = {
+const TURNS = {
 	[Direction.north]: [Direction.east, Direction.west],
 	[Direction.south]: [Direction.east, Direction.west],
 	[Direction.east]: [Direction.north, Direction.south],
@@ -11,97 +29,110 @@ const turns = {
 
 let bestFinalPathCost = Number.MAX_SAFE_INTEGER;
 
-const tracer = new StepTracer(
-	grid,
-	() => ({
-		minCost: Number.MAX_SAFE_INTEGER,
-		visits: {} as Record<number, number>
-	}),
-	(tracer, truck) => {
-		truck.step();
-		truck.state.steps++;
+function step(truck: Truck) {
+	truck.step();
+	truck.state.steps++;
 
-		if (!tracer.grid.includes(truck.coord)) {
-			tracer.remove(truck);
-			return;
-		}
-
-		const cellValue = tracer.grid.get(truck.coord)!;
-		const cellState = tracer.state.get(truck.coord)!;
-
-		// console.log({truck, state: truck.state});
-		// tracer.remove(truck);
-		// return;
-
-		truck.state.cost += parseInt(cellValue);
-
-		// console.log({truck});
-		// tracer.remove(truck);
-		// return;
-
-		// due to eratic behavior, we need to let trucks keep working even
-		// if they're not currently the ideal path, because any given truck might
-		// visit a node "behind" the others, but have the advantage of having
-		// straight line movement left. for now, we're "buffering" for this.
-		if (
-			truck.state.cost > cellState.minCost + 3
-			|| truck.state.cost >= bestFinalPathCost
-			// || (cellState.visits[truck.state.cost] || 0) > 3
-		) {
-			// cursor is already losing. kill it.
-			tracer.remove(truck);
-			return;
-		}
-
-		cellState.minCost = Math.min(truck.state.cost, cellState.minCost);
-		cellState.visits[truck.state.cost]++;
-
-		if (
-			truck.coord.x === tracer.grid.width - 1
-			&& truck.coord.y === tracer.grid.height - 1
-		) {
-			// that's it. we've made it. remove self and log the truck/path.
-			bestFinalPathCost = Math.min(bestFinalPathCost, truck.state.cost);
-			tracer.log.push(truck);
-			tracer.remove(truck);
-			return;
-		} else {
-			// cursor keeps going, branching out into left/right directions
-			// as well.
-			for (const direction of turns[truck.direction]) {
-				const copied = truck.copy({
-					direction,
-					state: {
-						cost: truck.state.cost,
-						steps: 0
-					}
-				});
-				// console.log({lrTruck});
-				tracer.add(copied);
-			};
-		}
-
-		// AOC rule where a cursor must change directions after three steps.
-		// because we already spawned left/right child cursors above, we just
-		// have to remove the forward-going cursor at this point.
-		if (truck.state.steps === 3) {
-			tracer.remove(truck);
-		}
+	if (!grid.includes(truck.coord)) {
+		return;
 	}
+
+	const cellValue = grid.get(truck.coord)!;
+	const cellState = state.get(truck.coord)!;
+
+	truck.state.cost += parseInt(cellValue);
+
+	// due to eratic behavior, we need to let trucks keep working even
+	// if they're not currently the ideal path, because any given truck might
+	// visit a node "behind" the others, but have the advantage of having
+	// straight line movement left. for now, we're "buffering" for this.
+	if (
+		// truck.state.cost > cellState.minCost
+		// ||
+		truck.state.cost >= (cellState.visits[truck.direction + truck.state.steps] || 100000)
+		|| truck.state.cost >= bestFinalPathCost
+	) {
+		// cursor is already losing. kill it.
+		return;
+	}
+
+	cellState.minCost = Math.min(truck.state.cost, cellState.minCost);
+	cellState.visits[truck.direction + truck.state.steps] = truck.state.cost;
+
+	if (
+		truck.coord.x === grid.width - 1
+		&& truck.coord.y === grid.height - 1
+	) {
+		// that's it. we've made it. remove self and log the truck/path.
+		bestFinalPathCost = Math.min(bestFinalPathCost, truck.state.cost);
+		return;
+	} else {
+		// cursor keeps searching, branching out into left/right directions
+		// as well.
+		for (const direction of TURNS[truck.direction]) {
+			const copied = truck.copy({
+				direction,
+				state: {
+					cost: truck.state.cost,
+					steps: 0
+				}
+			});
+			// console.log({lrTruck});
+			cursors.enqueue(copied, cost(copied));
+		};
+	}
+
+	// AOC rule where a cursor must change directions after three steps.
+	// because we already spawned left/right child cursors above, we just
+	// have to remove (omit) the forward-going cursor at this point. else,
+	// we need to explicitly re-enqueue to continue.
+	if (truck.state.steps < 3) {
+		cursors.enqueue(truck, cost(truck));
+	}
+};
+
+// hueristical cost function
+function cost(truck: Truck): number {
+	const distance = Math.sqrt(
+		Math.pow((grid.width + 1 - truck.coord.x), 2)
+		+ Math.pow((grid.height + 1 - truck.coord.y), 2)
+	);
+	return truck.state.cost * distance;
+}
+
+//
+// start solving.
+//
+// initial search starts from the top left and searches east and south.
+//
+
+cursors.enqueue(
+	new Cursor({x: 0, y: 0}, Direction.east, {cost: 0, steps: 0}),
+	0
 );
 
-const visited = (t) => t.state.reduce((sum, cellState) => {
-	if (cellState.length > 0) sum++;
-	return sum;
-}, 0);
+cursors.enqueue(
+	new Cursor({x: 0, y: 0}, Direction.south, {cost: 0, steps: 0}),
+	0
+);
 
-(async () => {
-	tracer.add(new Cursor({x: 0, y: 0}, Direction.east, {cost: 0, steps: 0}));
-	tracer.add(new Cursor({x: 0, y: 0}, Direction.south, {cost: 0, steps: 0}));
-	tracer.run((s) => {
-		console.log(`step: ${s}; cursors: ${tracer.cursors.length}`);
-	});
+let counter = 0;
+while (!cursors.isEmpty) {
+	const c = cursors.dequeue();
+	if (!c) {
+		console.log("Cursor not found.", cursors);
+		break;
+	}
 
-	const score = Math.min(...tracer.log.map(l => l.state.cost))
-	console.log({score});
-})();
+	step(c);
+	
+	// debugging
+	counter++;
+	if (counter % 10_000 === 0) {
+		console.log(
+			`steps: ${counter}; cursors: ${cursors.size}; min: ${cursors.min}`
+		);
+	}
+}
+
+console.log(bestFinalPathCost);

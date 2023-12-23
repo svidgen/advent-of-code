@@ -181,13 +181,13 @@ type CursorPath<T> = Pick<Cursor<T>, 'coord' | 'direction' | 'state'>;
 export class Cursor<T = any> {
 	coord: Coord;
 	direction: Direction;
+	state: T;
 	path: CursorPath<T>[] | undefined;
-	state: T | undefined;
 
 	constructor(
 		coord: Coord,
 		direction: Direction,
-		state?: T,
+		state: T,
 		path?: CursorPath<T>[] | undefined,
 	) {
 		this.coord = {...coord};
@@ -310,7 +310,7 @@ export class StepTracer<T, StateType = string> {
 	}
 }
 
-class Queue<T> {
+export class Queue<T> {
 	items: T[] = [];
 
 	get isEmpty() {
@@ -336,7 +336,7 @@ class Queue<T> {
 
 const EMPTY = Number.POSITIVE_INFINITY;
 
-class PriorityQueue<T> {
+export class PriorityQueue<T> {
 	buckets: T[][] = [];
 	min: number = EMPTY;
 	private _size: number = 0;
@@ -350,32 +350,39 @@ class PriorityQueue<T> {
 	}
 
 	enqueue(item: T, priority: number) {
-		this.buckets[priority] = this.buckets[priority] || [];
-		this.buckets[priority].push(item);
+		const p = Math.max(0, Math.floor(priority));
+		this.buckets[p] = this.buckets[p] || [];
+		this.buckets[p].push(item);
 		this._size++;
-		if (priority < this.min) this.min = priority;
+		this.min = Math.min(p, this.min);
 	}
 
 	dequeue(): T | undefined {
 		if (this.isEmpty) return;
 
 		let item: T | undefined;
-		while (!item && this.min < this.buckets.length) {
+		while (!item) {
 			const bucket = this.buckets[this.min];
-			const item = bucket.shift();
-			this.min++;
+			if (!!bucket) {
+				item = bucket.shift();
+				if (bucket.length === 0) this.min++;
+			} else {
+				this.min++;
+			}
 		}
 
 		this._size--;
+		if (this._size === 0) this.min = EMPTY;
+
 		return item;
 	}
 }
 
-type Prioritized = {
+export type Prioritized = {
 	priority: number;
 }
 
-class GoodPriorityQueue<T extends Prioritized> extends Queue<T> {
+export class AutoPriorityQueue<T extends Prioritized> extends Queue<T> {
 	private q = new PriorityQueue<T>();
 
 	get isEmpty() {
