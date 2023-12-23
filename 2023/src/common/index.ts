@@ -310,27 +310,53 @@ export class StepTracer<T, StateType = string> {
 	}
 }
 
+class QueueNode<T> {
+	constructor(
+		public value: T,
+		public next?: QueueNode<T> | undefined,
+	) {}
+}
+
 export class Queue<T> {
-	items: T[] = [];
+	head: QueueNode<T> | undefined;
+	tail: QueueNode<T> | undefined;
+	_size: number = 0;
 
 	get isEmpty() {
-		return this.items.length > 0;
+		return this._size === 0;
 	}
 
 	get size() {
-		return this.items.length;
+		return this._size;
 	}
 
 	enqueue(item: T) {
-		this.items.push(item);
+		const node = new QueueNode(item);
+		if (!this.head) {
+			this.head = node;
+		} else if (this.tail) {
+			this.tail.next = node;
+			this.tail = node;
+		} else {
+			this.head.next = node;
+			this.tail = node;
+		}
+		this._size++;
 	}
 
 	dequeue(): T | undefined {
-		return this.items.shift();
+		if (this.head) {
+			const item = this.head.value;
+			this.head = this.head.next;
+			this._size--;
+			return item;
+		}
 	}
 
 	clear() {
-		this.items = [];
+		this.head = undefined;
+		this.tail = undefined;
+		this._size = 0;
 	}
 }
 
