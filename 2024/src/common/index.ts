@@ -10,6 +10,83 @@ export function sum(values: number[]): number {
 	return total;
 }
 
+/**
+ * Transpose columnar input lines from something like this:
+ * 
+ * ```txt
+ * 1	2
+ * 2	3
+ * 1	5
+ * 3	9
+ * ```
+ * 
+ * Into this:
+ * 
+ * ```json
+ * [
+ * 	["1", "2", "1", "3"],
+ * 	["2", "3", "5", "9"]
+ * ]
+ * ```
+ * 
+ * @param lines 
+ */
+export function transposeLines(lines: string[]): string[][] {
+	const data = [] as string[][];
+	for (const line of lines) {
+		const cols = line.split(/\s+/g);
+		for (const [i, col] of cols.entries()) {
+			data[i] = data[i] || [];
+			data[i].push(col);
+		}
+	}
+	return data;
+}
+
+export function mapGrid<FROM, TO>(grid: FROM[][], map: ((v: FROM) => TO)): TO[][] {
+	const result = [] as TO[][];
+	for (const [ir, row] of grid.entries()) {
+		result[ir] = result[ir] || [];
+		for (const [ic, v] of row.entries()) {
+			result[ir][ic] = map(v);
+		}
+	}
+	return result;
+}
+
+/**
+ * For sorting by number value instead of string value.
+ * 
+ * @param a 
+ * @param b 
+ */
+export function byValue(a: number, b: number): number {
+	return a - b;
+}
+
+export function zipMap<FROM, TO>(
+	a: FROM[],
+	b: FROM[],
+	map: ((a: FROM | undefined, b: FROM | undefined) => TO)
+): TO[] {
+	const result = [] as TO[];
+	let i = 0;
+	let MAX = Math.max(a.length, b.length);
+	for (; i < MAX; i++) {
+		result.push(map(a[i], b[i]));
+	}
+	return result;
+}
+
+export function index<T>(items: T[]): Map<T, number[]> {
+	const index = new Map<T, number[]>();
+	for (const [idx, value] of items.entries()) {
+		if (!index.has(value)) index.set(value, []);
+		index.get(value)?.push(idx);
+	}
+	return index;
+}
+
 export type Coord = {
 	x: number;
 	y: number;
@@ -427,81 +504,4 @@ export class AutoPriorityQueue<T extends Prioritized> extends Queue<T> {
 	dequeue() {
 		return this.q.dequeue();
 	}
-}
-
-/**
- * Transpose columnar input lines from something like this:
- * 
- * ```txt
- * 1	2
- * 2	3
- * 1	5
- * 3	9
- * ```
- * 
- * Into this:
- * 
- * ```json
- * [
- * 	["1", "2", "1", "3"],
- * 	["2", "3", "5", "9"]
- * ]
- * ```
- * 
- * @param lines 
- */
-export function transposeLines(lines: string[]): string[][] {
-	const data = [] as string[][];
-	for (const line of lines) {
-		const cols = line.split(/\s+/g);
-		for (const [i, col] of cols.entries()) {
-			data[i] = data[i] || [];
-			data[i].push(col);
-		}
-	}
-	return data;
-}
-
-export function mapGrid<FROM, TO>(grid: FROM[][], map: ((v: FROM) => TO)): TO[][] {
-	const result = [] as TO[][];
-	for (const [ir, row] of grid.entries()) {
-		result[ir] = result[ir] || [];
-		for (const [ic, v] of row.entries()) {
-			result[ir][ic] = map(v);
-		}
-	}
-	return result;
-}
-
-/**
- * For sorting by number value instead of string value.
- * 
- * @param a 
- * @param b 
- */
-export function byValue(a: number, b: number): number {
-	return a - b;
-}
-
-export function zipMap<FROM, TO>(
-	a: FROM[],
-	b: FROM[],
-	map: ((a: FROM | undefined, b: FROM | undefined) => TO)
-): TO[] {
-	const result = [] as TO[];
-	let i = 0;
-	let MAX = Math.max(a.length, b.length);
-	for (; i < MAX; i++) {
-		result.push(map(a[i], b[i]));
-	}
-	return result;
-}
-
-export function simpleIndex<T>(items: T[]): Map<T, { indexes: number[] }> {
-	const index = new Map<T, { indexes: number[] }>();
-	for (const [idx, value] of items.entries()) {
-		if (!index.has(value)) index.set(value, { indexes: [] });
-		index.get(value)!.indexes.push(idx);
-	}
-	return index;
 }

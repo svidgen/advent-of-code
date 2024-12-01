@@ -5,7 +5,7 @@ import {
     mapGrid,
     zipMap,
     sum,
-    simpleIndex
+    index
 } from '../common/index.js';
 
 /**
@@ -27,7 +27,7 @@ console.log('part 1', part1);
 /**
  * part 2
  */
-const rightIndex = simpleIndex(right);
-const scores = left.map(v => v * (rightIndex.get(v)?.indexes.length || 0));
+const rightIndex = index(right);
+const scores = left.map(v => v * (rightIndex.get(v)?.length || 0));
 const part2 = sum(scores);
 console.log('part 2', part2);
