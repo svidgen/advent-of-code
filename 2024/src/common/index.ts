@@ -101,6 +101,17 @@ export enum Direction {
 	west = '←',
 }
 
+/**
+ * Grid of lines where `y` is inverted (like row number) instead of a
+ * mathematical graph. Corners are:
+ * 
+ * ```
+ * 0,0 ... X,0
+ * .         .
+ * .         .
+ * 0,Y ... X,Y
+ * ```
+ */
 export class Grid<T> {
 	data: T[][] = []; // in [y][x] orientation
 	width: number = 0;
@@ -217,6 +228,38 @@ export class Grid<T> {
 		}
 	}
 
+	/**
+	 * Array of diagonals that stretch from the bottom left (0,Y) to the
+	 * top right (X, 0).
+	 * 
+	 * ```
+	 * 0,0 ... X,0
+	 * .         .
+	 * .         .
+	 * 0,Y ... X,Y
+	 * ```
+	 */
+	private get diagonalsClimbing() {
+		// Undecided whether this would be helpful.
+		return null;
+	}
+
+	/**
+	 * Array of diagonals that stretch from the top left (0,0) to the
+	 * bottom right (X, Y).
+	 * 
+	 * ```
+	 * 0,0 ... X,0
+	 * .         .
+	 * .         .
+	 * 0,Y ... X,Y
+	 * ```
+	 */
+	private get diagonalsFalling() {
+		// Undecided whether this would be helpful.
+		return null;
+	}
+
 	private *_coords() {
 		for (let y = 0; y < this.height; y++) {
 			for (let x = 0; x < this.width; x++) {
@@ -227,6 +270,55 @@ export class Grid<T> {
 
 	get coords() {
 		return this._coords();
+	}
+
+	searchAt<RT>(
+		coord: Coord,
+		search: (itemGen: Generator<T>) => RT,
+		directions: 'all' | 'cardinal' = 'all'
+	): RT[] {
+		const searchBeams = [
+			this.searchBeaconAt(coord, [Direction.north]),
+			this.searchBeaconAt(coord, [Direction.south]),
+			this.searchBeaconAt(coord, [Direction.east]),
+			this.searchBeaconAt(coord, [Direction.west]),
+		];
+
+		if (directions === 'all') {
+			searchBeams.push(
+				this.searchBeaconAt(coord, [Direction.north, Direction.east]),
+				this.searchBeaconAt(coord, [Direction.north, Direction.west]),
+				this.searchBeaconAt(coord, [Direction.south, Direction.east]),
+				this.searchBeaconAt(coord, [Direction.south, Direction.west]),
+			);
+		}
+
+		const results: RT[] = [];
+		for (const beam of searchBeams) {
+			results.push(search(beam));
+		}
+		return results;
+	}
+
+	* searchBeaconAt(coord: Coord, stepping: Direction[]): Generator<T> {
+		let x = coord.x;
+		let y = coord.y;
+
+		const stepX =
+			stepping.includes(Direction.north) ? 1
+				: stepping.includes(Direction.south) ? -1
+					: 0;
+		
+		const stepY =
+			stepping.includes(Direction.east) ? 1
+				: stepping.includes(Direction.west) ? -1
+					: 0;
+		
+		while (this.includes({ x, y })) {
+			yield this.get({ x, y })!;
+			x += stepX;
+			y += stepY;
+		}
 	}
 
 	reduce<RT>(fn: (accumulator: RT, currentValue: T, coord: Coord) => RT, init: RT) {
