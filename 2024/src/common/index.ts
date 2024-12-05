@@ -1,8 +1,24 @@
 import * as fs from 'fs';
 import * as process from 'process';
 
+/**
+ * The input from the filename specified by the first CLI argument.
+ */
 export const raw = fs.readFileSync(process.argv[2], 'utf-8');
+
+/**
+ * The input from `raw` as an array of individual lines.
+ */
 export const lines = raw.trim().split(/\n/);
+
+/**
+ * The input from `raw` broken out by "blocks", where a "block" is a
+ * chunk of input separated by exactly two newlines.
+ */
+export const blocks = raw.trim().split(/\n\n/).map(raw => ({
+	raw,
+	lines: raw.trim().split(/\n/)
+}));
 
 export function sum(values: number[]): number {
 	let total = 0;
