@@ -38,18 +38,9 @@ function isValid(line: number[]): boolean {
  * Comparison for two page numbers to sort by order the the sorting rules.
  */
 function byPageRule(a: number, b: number): number {
-    const ruleA = sortingRules.get(a);
-    if (ruleA) {
-        if (ruleA.includes(b)) return 1;
-    }
-    
-    const ruleB = sortingRules.get(b);
-    if (ruleB) {
-        if (ruleB.includes(a)) return -1;
-    }
-
-    // We have rules for all the numbers. This just makes TS happy.
-    throw new Error(`No rule found for either ${a} or ${b}.`);
+    if (sortingRules.get(a)?.includes(b)) return 1;
+    if (sortingRules.get(b)?.includes(a)) return -1;
+    return 0;
 }
 
 function part1() {
@@ -64,4 +55,7 @@ function part2() {
     return sum(midpoints);
 }
 
-console.log({part1: part1(), part2: part2()});
+console.log({
+    part1: part1(),
+    part2: part2()
+});
