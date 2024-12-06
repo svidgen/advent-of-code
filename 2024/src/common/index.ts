@@ -117,6 +117,8 @@ export enum Direction {
 	west = '←',
 }
 
+export type TurnDirection = 'right' | 'left';
+
 /**
  * Grid of lines where `y` is inverted (like row number) instead of a
  * mathematical graph. Corners are:
@@ -188,6 +190,12 @@ export class Grid<T> {
 		if (coord.y > this.width) this.height = coord.y;
 	}
 
+	* find(predicate: (item: T) => boolean): Generator<Coord> {
+		for (const coord of this.coords) {
+			if (predicate(this.get(coord)!)) yield coord
+		}
+	}
+
 	vertical(x: number): T[] {
 		let items: T[] = [];
 		for (let y = 0; y < this.height; y++) {
@@ -242,38 +250,6 @@ export class Grid<T> {
 		for (let y = 0; y < this.height; y++) {
 			this.setHorizontal(y, h[y]);
 		}
-	}
-
-	/**
-	 * Array of diagonals that stretch from the bottom left (0,Y) to the
-	 * top right (X, 0).
-	 * 
-	 * ```
-	 * 0,0 ... X,0
-	 * .         .
-	 * .         .
-	 * 0,Y ... X,Y
-	 * ```
-	 */
-	private get diagonalsClimbing() {
-		// Undecided whether this would be helpful.
-		return null;
-	}
-
-	/**
-	 * Array of diagonals that stretch from the top left (0,0) to the
-	 * bottom right (X, Y).
-	 * 
-	 * ```
-	 * 0,0 ... X,0
-	 * .         .
-	 * .         .
-	 * 0,Y ... X,Y
-	 * ```
-	 */
-	private get diagonalsFalling() {
-		// Undecided whether this would be helpful.
-		return null;
 	}
 
 	private *_coords() {
@@ -406,6 +382,35 @@ export class Cursor<T = any> {
 				throw new Error('Bad direction!');
 				break;
 		}
+	}
+
+	undo(direction?: Direction) {
+		const returnToDirection = direction || this.direction;
+		const undoDirection = {
+			[Direction.north]: Direction.south,
+			[Direction.south]: Direction.north,
+			[Direction.east]: Direction.west,
+			[Direction.west]: Direction.east
+		}[direction || this.direction];
+		this.step(undoDirection);
+		this.direction = returnToDirection;
+
+		// undo assumes we made a mistake or "bumped into" something by stepping
+		// into a cell we can't validly visit. Hence, both the step into that cell
+		// and the step *out* of that cell should be un-recorded.
+		this.path?.pop();
+		this.path?.pop();
+	}
+
+	turn(direction: TurnDirection) {
+		const offset = direction === 'right' ? 0 : 1;
+		const turns = {
+			[Direction.north]: [Direction.east, Direction.west],
+			[Direction.east]: [Direction.south, Direction.north],
+			[Direction.south]: [Direction.west, Direction.east],
+			[Direction.west]: [Direction.north, Direction.south],
+		};
+		this.direction = turns[this.direction][offset];
 	}
 
 	get isEastWest() {
