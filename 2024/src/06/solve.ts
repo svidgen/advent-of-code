@@ -32,8 +32,7 @@ const tracer = new StepTracer(
             // of the board
             self.remove(cursor);
         }
-    },
-    1000
+    }
 );
 
 const start = [...grid.find(c => c === '^')].pop()!;
@@ -44,4 +43,5 @@ const visited = (t: any) => t.state.reduce((sum, cellState) => {
 	return sum + cellState;
 }, 0);
 
-console.log(tracer.state.toString(), visited(tracer));
+console.log(grid.width * grid.height);
+console.log(visited(tracer));
