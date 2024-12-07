@@ -331,6 +331,10 @@ export class Grid<T> {
 		return new Grid(data);
 	}
 
+	copy() {
+		return this.map((v,_c) => v);
+	}
+
 	toString(map: (item: T) => string = String) {
 		return this.data.map(line => 
 			line.map(item => map(item)).join('')
