@@ -16,7 +16,11 @@ const problems = lines.map(line => {
  * @param param0 
  * @returns 
  */
-function check(result: number, operands: number[]): ("+" | "*")[] | undefined {
+function check(
+    result: number,
+    operands: number[],
+    includeConcatenation: boolean
+): ("+" | "*" | '.')[] | undefined {
     const operand = operands.pop()!;
 
     // base case.
@@ -33,7 +37,7 @@ function check(result: number, operands: number[]): ("+" | "*")[] | undefined {
     const divided = result / operand;
     if (divided === Math.floor(divided)) {
         // valid equation path to explore
-        const path = check(divided, [...operands]);
+        const path = check(divided, [...operands], includeConcatenation);
         if (path) {
             return [...path, '*'];
         }
@@ -42,9 +46,21 @@ function check(result: number, operands: number[]): ("+" | "*")[] | undefined {
     const subtracted = result - operand;
     if (subtracted >= 0) {
         // valid equation path to explore
-        const path = check(subtracted, [...operands]);
+        const path = check(subtracted, [...operands], includeConcatenation);
         if (path) {
             return [...path, '+'];
+        }
+    }
+
+    if (includeConcatenation) {
+        const r = result.toString()
+        const o = operand.toString();
+        if (r.endsWith(o)) {
+            const uncatted = r.substring(0, r.length - o.length);
+            const path = check(parseInt(uncatted), [...operands], includeConcatenation);
+            if (path) {
+                return [...path, '.'];
+            }
         }
     }
 
@@ -52,11 +68,15 @@ function check(result: number, operands: number[]): ("+" | "*")[] | undefined {
     return undefined;
 }
 
-let total = 0;
+let part1 = 0;
+let part2 = 0;
 for (const problem of problems) {
-    if (check(problem.result, [...problem.operands])) {
-        total += problem.result;
+    if (check(problem.result, [...problem.operands], false)) {
+        part1 += problem.result;
+    }
+    if (check(problem.result, [...problem.operands], true)) {
+        part2 += problem.result;
     }
 }
 
-console.log(total);
+console.log(part1, part2);
