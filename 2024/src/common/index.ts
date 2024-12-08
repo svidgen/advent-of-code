@@ -26,6 +26,16 @@ export function sum(values: number[]): number {
 	return total;
 }
 
+export function group<T>(items: T[], groupBy: (item: T) => string): Map<string, T[]> {
+	const groups = new Map<string, T[]>();
+	for (const item of items) {
+		const name = groupBy(item);
+		if (!groups.has(name)) groups.set(name, []);
+		groups.get(name)!.push(item);
+	}
+	return groups;
+}
+
 /**
  * Transpose columnar input lines from something like this:
  * 
@@ -183,7 +193,13 @@ export class Grid<T> {
 		return this.data[coord.y]?.[coord.x];
 	}
 
-	set(coord: Coord, value: T) {
+	/**
+	 * Sets a value in the grid, **expanding the grid by default as-needed**.
+	 * @param coord 
+	 * @param value 
+	 */
+	set(coord: Coord, value: T, autoExpand: boolean = true) {
+		if (!autoExpand && !this.includes(coord)) return;
 		this.data[coord.y] = this.data[coord.y] || [];
 		this.data[coord.y][coord.x] = value;
 		if (coord.x > this.width) this.width = coord.x;
