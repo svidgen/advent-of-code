@@ -37,6 +37,15 @@ export function group<T>(items: T[], groupBy: (item: T) => string): Map<string, 
 }
 
 /**
+ * Turns a line of digits into an array of integers.
+ * 
+ * @param line 
+ */
+export function digitsFrom(line: string): number[] {
+	return line.trim().split('').map(d => parseInt(d));
+}
+
+/**
  * Transpose columnar input lines from something like this:
  * 
  * ```txt
