@@ -6,7 +6,8 @@ import { raw, digitsFrom } from '../common/index.js';
 class Fragment {
 	constructor(
 		public fileNumber: number,
-		public size: number
+		public size: number,
+		public free: number = 0
 	) {}
 
 	public sum(blockStart: number) {
@@ -28,7 +29,7 @@ function isFileIndex(idx: number): boolean {
 
 function fileId(idx: number): number {
 	if (!isFileIndex(idx)) {
-		throw new Error(`Tried to get filename from non-file index: ${idx}.`)
+		return 0;
 	}
 	return idx / 2;
 }
@@ -77,11 +78,52 @@ function part1() {
 	return fragments;
 }
 
+function part2() {
+	const diskMap = digitsFrom(raw);
+	const fragments: Fragment[] = [];
+
+	for (let i = 0; i < diskMap.length; i++) {
+		fragments.push(new Fragment(
+			isFreeSpaceIndex(i) ? 0 : i / 2,
+			diskMap[i],
+			isFreeSpaceIndex(i) ? diskMap[i] : 0
+		));
+	}
+
+	for (const rightFrag of [...fragments].reverse()) {
+		if (rightFrag.fileNumber === 0) continue;
+		for (const leftFrag of fragments) {
+			if (leftFrag === rightFrag) break;
+			if (leftFrag.free === rightFrag.size) {
+				leftFrag.free = 0;
+				leftFrag.fileNumber = rightFrag.fileNumber;
+				rightFrag.fileNumber = 0;
+				break;
+			} else if (leftFrag.free > rightFrag.size) {
+				// split it ... :/ ...
+				const splitOutSize = leftFrag.size - rightFrag.size;
+				leftFrag.size = rightFrag.size;
+				leftFrag.free = 0;
+				leftFrag.fileNumber = rightFrag.fileNumber;
+				fragments.splice(fragments.indexOf(leftFrag) + 1, 0, new Fragment(
+					0,
+					splitOutSize,
+					splitOutSize
+				));
+				rightFrag.fileNumber = 0;
+				// fragment split means we need to adjust i.
+				break;
+			}
+		}
+	}
+	
+	return fragments;
+}
+
 function checksum(fragments: Fragment[]): number {
 	let sum = 0;
 	let blockStart = 0;
 	for (const fragment of fragments) {
-		// console.log(`block ${blockStart}, fragment ${fragment}, score ${fragment.sum(blockStart)}`);
 		sum += fragment.sum(blockStart);
 		blockStart += fragment.size;
 	}
@@ -90,3 +132,4 @@ function checksum(fragments: Fragment[]): number {
 
 // console.log(diskMap, fragments, sum);
 console.log('part 1', checksum(part1()));
+console.log('part 2', checksum(part2()));
