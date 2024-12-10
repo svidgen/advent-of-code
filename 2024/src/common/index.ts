@@ -203,6 +203,44 @@ export class Grid<T> {
 	}
 
 	/**
+	 * Returns all neighbor coordinates, except those off the grid by default.
+	 * 
+	 * 1. coord - Coordinate to search around.
+	 * 2. withOrdinals - Whether to include NE, SE, SW, NW coords. Default true.
+	 * 3. withCardinals - Whether to include N, S, E, W coords. Default true.
+	 * 4. withSelf - Whether to include the *given* coord. Default false.
+	 * 5. withOffGrid - Whether to include coords off the grid. Default false.
+	 */
+	* neighbors(coord: Coord, {
+		withCardinals = true,
+		withOrdinals = true,
+		withSelf = false,
+		offGrid = false
+	}: {
+		withOrdinals?: boolean,
+		withCardinals?: boolean,
+		withSelf?: boolean,
+		offGrid?: boolean
+	} = {}): Generator<Coord> {
+		for (let dx = -1; dx <= 1; dx++) {
+			for (let dy = -1; dy <= 1; dy++) {
+				if (dx === 0 && dy === 0) {
+					if (!withSelf) continue;
+				} else if (dx === 0 || dy === 0) {
+					if (!withCardinals) continue;
+				} else {
+					if (!withOrdinals) continue;
+				}
+
+				const c = { x: coord.x + dx, y: coord.y + dy };
+				if (!offGrid && !this.includes(c)) continue;
+				
+				yield c;
+			}
+		}
+	}
+
+	/**
 	 * Sets a value in the grid, **expanding the grid by default as-needed**.
 	 * @param coord 
 	 * @param value 
@@ -477,9 +515,16 @@ export class Cursor<T = any> {
 	}
 }
 
-export type CursorStep<T, ST> = (tracer: StepTracer<T, ST>, cursor: Cursor) => void;
+export type CursorStep<T, ST, CT = any> = (
+	tracer: StepTracer<T, ST>,
+	cursor: CT
+) => void;
 
-export class StepTracer<T, StateType = string> {
+export class StepTracer<
+	T,
+	StateType = string,
+	CursorType extends Cursor<any> = Cursor<any>
+> {
 	cursors: Cursor[] = [];
 	removed: Set<Cursor> = new Set<Cursor>;
 	state: Grid<StateType>;
@@ -494,6 +539,36 @@ export class StepTracer<T, StateType = string> {
 		this.reset();
 	}
 
+	static build<T, StateType, CursorType extends Cursor<any>>({
+		grid,
+		stateInit,
+		cursorInit,
+		cursorStep,
+		maxSteps = 1_000_000
+	}: {
+		grid: Grid<T>,
+		stateInit: (x: number, y: number) => StateType,
+		cursorInit: (
+			x: number,
+			y: number,
+			grid: Grid<T>
+		) => CursorType | null,
+		cursorStep: CursorStep<T, StateType, CursorType>,
+		maxSteps?: number
+	}) {
+		const tracer = new StepTracer<T, StateType, CursorType>(
+			grid,
+			stateInit,
+			cursorStep,
+			maxSteps
+		);
+		for (const coord of grid.coords) {
+			const c = cursorInit(coord.x, coord.y, grid);
+			if (c) tracer.add(c);
+		}
+		return tracer;
+	}
+
 	reset() {
 		this.log = [];
 		this.state = Grid.fromDimensions(this.grid.width, this.grid.height, this.stateInit);
@@ -501,11 +576,11 @@ export class StepTracer<T, StateType = string> {
 		this.removed = new Set<Cursor>();
 	}
 
-	add(cursor: Cursor) {
+	add(cursor: CursorType) {
 		this.cursors.push(cursor);
 	}
 
-	remove(cursor: Cursor) {
+	remove(cursor: CursorType) {
 		this.removed.add(cursor);
 	}
 
