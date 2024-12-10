@@ -1,14 +1,19 @@
-import { raw, digitsFrom, sum } from '../common/index.js';
+import { raw, digitsFrom } from '../common/index.js';
 
 const diskMap = digitsFrom(raw);
+console.log(diskMap, diskMap.length);
 
+const fragments: Fragment[] = [];
+
+/**
+ * A set of contiguous blocks belonging to one file.
+ */
 class Fragment {
 	constructor(
-		public blockStart: number,
 		public fileNumber: number,
 
 		/**
-		 * The number of blocks.
+		 * The number of blocks in the fragment
 		 */
 		public size: number
 	) {}
@@ -37,48 +42,78 @@ class Fragment {
 	 * For our purposes, this probably doesn't save any meaningful computation (if at all).
 	 * But, since we *can* use some math here, may as well exercise the math muscle a litte.
 	 * 
-	 * @param fileId 
 	 * @param blockStart 
-	 * @param blockWidth 
 	 * @returns 
 	 */
-	public sum() {
-		return this.fileNumber * (
-			this.blockStart * this.size
-			+ ( this.size * (this.size + 1) ) / 2
-		);
+	public sum(blockStart: number) {
+		const F = this.fileNumber;
+		const P = blockStart;
+		const S = this.size;
+		const N = S - 1;
+		return F * ( P * S + ( N * (N + 1) ) / 2);
 	}
+
+	toString() {
+		return new Array(this.size).fill(this.fileNumber).join('');
+	}
+}
+
+function isFileIndex(idx: number): boolean {
+	return idx % 2 === 0;
+}
+
+function fileId(idx: number): number {
+	if (!isFileIndex(idx)) {
+		throw new Error(`Tried to get filename from non-file index: ${idx}.`)
+	}
+
+	return idx / 2;
+}
+
+function isFreeSpaceIndex(idx: number): boolean {
+	return idx % 2 === 1;
 }
 
 let i_left = 0;
 let i_right = diskMap.length - 1;
-let currentBlock = 0;
-let sumOfBlocks = 0;
-while (i_left < i_right) {
-	// A "fragment" shall be a set of contiguous blocks belonging to a single file.
-
-	// firstly, if the left-hand index points to already-defined file-space, we just
-	// need to compute the "score" for that fragment and move the pointer. the index
-	// belongs to a file already if it's even.
-	if (i_left % 2 === 0) {
-		// the index indicates the file ID. but, because indexes alternate
-		// between files and free blocks, the file ID is *half* of the index.
-		sumOfBlocks += fragmentSum(i_left / 2, currentBlock, diskMap[i_left]);
-
-		// we're now looking at the block 
+while (i_left <= i_right) {
+	if (isFileIndex(i_left)) {
+		fragments.push(new Fragment(fileId(i_left), diskMap[i_left]));
+		diskMap[i_left] = 0; // so we can see what has been consumed
+		i_left++;
+		continue;
 	}
 
-	// secondly, if the right-hand index points to free space, we can just scan past it.
-	// and, it indicates free space if it's an odd-numbered index.
-	if (i_right % 2 === 1) {
+	if (diskMap[i_left] === 0) {
+		i_left++;
+		continue;
+	}
+
+	if (isFreeSpaceIndex(i_right) || diskMap[i_right] === 0) {
+		diskMap[i_right] = 0;
 		i_right--;
 		continue;
 	}
-	
 
-	// when moving blocks from the right to the left, we need to move the smaller of the
-	// AVAILABLE blocks and the FREE blocks.
-	const available = diskMap[i_right];
-	const free = diskMap[i_left];
-	const blocksToMove = Math.min(available, free);
+	// figure out how many blocks we can move
+	const fileBlocks = diskMap[i_right];
+	const freeBlocks = diskMap[i_left];
+	const blocksToMove = Math.min(fileBlocks, freeBlocks);
+
+	// push the fragment
+	fragments.push(new Fragment(fileId(i_right), blocksToMove));
+
+	// "move the blocks" (update the disk map)
+	diskMap[i_left] -= blocksToMove;
+	diskMap[i_right] -= blocksToMove;
 }
+
+let sum = 0;
+let blockStart = 0;
+for (const fragment of fragments) {
+	console.log(`block ${blockStart}, fragment ${fragment}, score ${fragment.sum(blockStart)}`);
+	sum += fragment.sum(blockStart);
+	blockStart += fragment.size;
+}
+
+console.log(diskMap, fragments, sum);
