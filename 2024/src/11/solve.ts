@@ -8,6 +8,8 @@ const memos = new Map<string, number>();
  * Performs the "blink" operation against a single stone a number of times,
  * returning the *number* of stones present after the blink.
  * 
+ * Uses BigInts as stone data ... just in case.
+ * 
  * @param stone The number on the stone.
  * @param times The number of times to blink.
  */
