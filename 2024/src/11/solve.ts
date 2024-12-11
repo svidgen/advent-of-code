@@ -28,7 +28,6 @@ function blink(stone: BigInt, times: number): number {
 	if (asString.length % 2 === 0) {
 		const left = BigInt(asString.substring(0, (asString.length) / 2));
 		const right = BigInt(asString.substring(asString.length / 2));
-		// return [...blink(left, times - 1), ...blink(right, times - 1)];
 		// @ts-ignore
 		result = blink(left, times - 1) + blink(right, times - 1);
 	} else {
@@ -39,12 +38,6 @@ function blink(stone: BigInt, times: number): number {
 	memos.set(key, result);
 	return result;
 }
-
-// function test() {
-// 	for (let i = 0; i <= 6; i++) {
-// 		console.log(i, stones.map(s => blink(s, i)));
-// 	}
-// }
 
 function part1() {
 	return sum(stones.map(s => blink(s, 25)));
