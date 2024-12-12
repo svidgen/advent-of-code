@@ -80,17 +80,36 @@ class Region<T> {
     /**
      * Count of corners.
      * 
+     * A cell forms a corner at each "open" ordinal where the corresponding/adjacent
+     * cardinals are the same -- either both "closed" or both "open".
+     * 
      * ```
-     * ..........
-     * ..O.......
-     * ..OOO.....
+     * !ordinal && cardinalA === cardinalB
+     * ```
+     * 
+     * It also forms a corner if the ordinal is "closed" and the corresponding/adjacent
+     * cardinals are "open". See the "special corner" cases below.
+     * 
+     * ```
+     * ..OOOO....
+     * ..O..O.... // special corner case here!
+     * ..OOO..... // same special case here!
      * .OOOOO....
      * .OOO.O....
      * ...O......
      * ```
      * 
-     * A cell forms a corner at each "open" diagonal where the corresponding/adjacent
-     * cardinals are the same -- either both "closed" or both "open".
+     * So that's:
+     * 
+     * ```
+     * ordinal && !cardinalA && !cardinalB
+     * ```
+     * 
+     * When these rules are combined:
+     * 
+     * ```
+     * (!ordinal && !cardinal) || (ordinal && !cardinals)
+     * ```
      */
     get corners() {
         let corners = 0;
@@ -100,10 +119,10 @@ class Region<T> {
                 ...this.map.neighbors(coord, { offGrid: true })
             ].map(c => this.map.get(c) === this);
 
-            const NECorner = !NE && (N === E) ? 1 : 0;
-            const NWCorner = !NW && (N === W) ? 1 : 0;
-            const SECorner = !SE && (S === E) ? 1 : 0;
-            const SWCorner = !SW && (S === W) ? 1 : 0;
+            const NECorner = (NE && !N && !E) || (!NE && (N === E)) ? 1 : 0;
+            const NWCorner = (NW && !N && !W) || (!NW && (N === W)) ? 1 : 0;
+            const SECorner = (SE && !S && !E) || (!SE && (S === E)) ? 1 : 0;
+            const SWCorner = (SW && !S && !W) || (!SW && (S === W)) ? 1 : 0;
 
             corners += NECorner + NWCorner + SECorner + SWCorner;
         }
@@ -128,8 +147,6 @@ console.log('part1', sum([...regions].map(r => {
 })));
 
 console.log('part2', sum([...regions].map(r => {
-    // console.log(r.visual.toString());
     const price = r.area * r.sides;
-    // console.log({ area: r.area, sides: r.sides, price });
     return price;
 })));
