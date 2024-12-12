@@ -55,19 +55,81 @@ class Region<T> {
         return perimeter;
     }
 
+    /**
+     * Count of "sides".
+     * 
+     * A "side" is a contiguous/unbent section of the perimeter.
+     * 
+     * Each cell contributes to the side count based on how many corners it forms.
+     * I.e., if you start following a wall, every time you need to turn, a new side
+     * is formed.
+     * 
+     * ```
+     * ..........
+     * ..O.......
+     * ..OOO.....
+     * .OOOOO....
+     * .OOO.O....
+     * ...O......
+     * ```
+     */
+    get sides() {
+        return this.corners;
+    }
+
+    /**
+     * Count of corners.
+     * 
+     * ```
+     * ..........
+     * ..O.......
+     * ..OOO.....
+     * .OOOOO....
+     * .OOO.O....
+     * ...O......
+     * ```
+     * 
+     * A cell forms a corner at each "open" diagonal where the corresponding/adjacent
+     * cardinals are the same -- either both "closed" or both "open".
+     */
+    get corners() {
+        let corners = 0;
+
+        for (const coord of this._coords) {
+            const [NW, N, NE, W, E, SW, S, SE] = [
+                ...this.map.neighbors(coord, { offGrid: true })
+            ].map(c => this.map.get(c) === this);
+
+            const NECorner = !NE && (N === E) ? 1 : 0;
+            const NWCorner = !NW && (N === W) ? 1 : 0;
+            const SECorner = !SE && (S === E) ? 1 : 0;
+            const SWCorner = !SW && (S === W) ? 1 : 0;
+
+            corners += NECorner + NWCorner + SECorner + SWCorner;
+        }
+
+        return corners;
+    }
+
     get visual() {
         const v = Grid.fromDimensions<string>(this.map.width, this.map.height, () => '.');
         for (const c of this._coords) {
-            v.set(c, '#');
+            v.set(c, 'O');
         }
         return v;
     }
 }
 
 const regions = Region.findAll(plots);
-console.log(sum([...regions].map(r => {
-    console.log(r.visual.toString());
+
+console.log('part1', sum([...regions].map(r => {
     const price = r.area * r.perimeter;
-    console.log({ area: r.area, perimeter: r.perimeter, price });
+    return price;
+})));
+
+console.log('part2', sum([...regions].map(r => {
+    // console.log(r.visual.toString());
+    const price = r.area * r.sides;
+    // console.log({ area: r.area, sides: r.sides, price });
     return price;
 })));

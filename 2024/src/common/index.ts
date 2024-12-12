@@ -210,6 +210,12 @@ export class Grid<T> {
 	 * 3. withCardinals - Whether to include N, S, E, W coords. Default true.
 	 * 4. withSelf - Whether to include the *given* coord. Default false.
 	 * 5. withOffGrid - Whether to include coords off the grid. Default false.
+	 * 
+	 * Yields in the order of:
+	 * 
+	 * ```
+	 * NW, N, NE, W, Self, E, SW, S, SE
+	 * ```
 	 */
 	* neighbors(coord: Coord, {
 		withCardinals = true,
@@ -222,8 +228,8 @@ export class Grid<T> {
 		withSelf?: boolean,
 		offGrid?: boolean
 	} = {}): Generator<Coord> {
-		for (let dx = -1; dx <= 1; dx++) {
-			for (let dy = -1; dy <= 1; dy++) {
+		for (let dy = -1; dy <= 1; dy++) {
+			for (let dx = -1; dx <= 1; dx++) {
 				if (dx === 0 && dy === 0) {
 					if (!withSelf) continue;
 				} else if (dx === 0 || dy === 0) {
