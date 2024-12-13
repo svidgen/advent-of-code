@@ -78,6 +78,39 @@ export function transposeLines(lines: string[]): string[][] {
 	return data;
 }
 
+/**
+ * Transpose something like this:
+ * 
+ * ```
+ * [
+ * 	[1, 2],
+ * 	[3, 4],
+ * 	[5, 6]
+ * ]
+ * ```
+ * 
+ * Into this:
+ * 
+ * ```
+ * [
+ * 	[1, 3, 5],
+ * 	[2, 4, 6]
+ * ]
+ * ```
+ * 
+ * @param arr 
+ */
+export function transposeArray<T>(arr: T[][]): T[][] {
+	const result: T[][] = [];
+	for (let r = 0; r < arr.length; r++) {
+		for (let c = 0; c < arr[r].length; c++) {
+			if (!result[c]) result[c] = [];
+			result[c].push(arr[r][c]);
+		}
+	}
+	return result;
+}
+
 export function mapGrid<FROM, TO>(grid: FROM[][], map: ((v: FROM) => TO)): TO[][] {
 	const result = [] as TO[][];
 	for (const [ir, row] of grid.entries()) {
@@ -729,12 +762,12 @@ export class AutoPriorityQueue<T extends Prioritized> extends Queue<T> {
 	}
 }
 
-type Equation = {
+export type Equation = {
     y: number,
     x: number[]
 };
 
-type Solution = number[];
+export type Solution = number[];
 
 /**
  * Solves a system of linear equations.
@@ -788,7 +821,7 @@ export function partialLinearSystem(equations: Equation[], c0: number): Equation
     }).slice(1);
 }
 
-function positiveIntSolutions(equations: Equation[], limit: number = 1000): Solution[] {
+export function positiveIntSolutions(equations: Equation[], limit: number = 50000): Solution[] {
     const solution = solveLinearSystem(equations);
 
     // if there is no solution, we can stop looking!
@@ -797,7 +830,7 @@ function positiveIntSolutions(equations: Equation[], limit: number = 1000): Solu
     // if we have a single solution, we only care about it if the
     // coefficients are all positive.
     if (solution !== 'multiple') {
-        if (solution.every(c => c >= 0)) {
+        if (solution.every(c => c >= 0) && solution.every(c => Number.isInteger(c))) {
             return [solution];
         } else {
             return [];
