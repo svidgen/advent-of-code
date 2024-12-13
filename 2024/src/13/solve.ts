@@ -35,15 +35,18 @@ function equationSystemString(eqs: Equation[]) {
     return eqs.map(eq => equationString(eq)).join('\n');
 }
 
-const equations = blocks.map(b => parseLinearEquations(b));
-
-let part1 = 0;
-for (const eq of equations) {
-    const solution = bestPositiveIntSolution(eq, costToPlay);
-    console.log(equationSystemString(eq));
+function solve(eqs: Equation[]): number {
+    const solution = bestPositiveIntSolution(eqs, costToPlay);
+    console.log(equationSystemString(eqs));
     console.log('solution: ', solution);
-    console.log('raw solve: ', solveLinearSystem(eq));
+    console.log('raw solve: ', solveLinearSystem(eqs));
     console.log();
-    if (solution) part1 += costToPlay(solution);
+    if (solution) return costToPlay(solution);
+    return 0;
 }
+
+const equations = blocks.map(b => parseLinearEquations(b));
+let part1 = sum(equations.map(s => solve(s)));
+
+
 console.log('part1', part1);
