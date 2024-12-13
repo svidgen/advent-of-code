@@ -801,9 +801,11 @@ export function solveLinearSystem(equations: Equation[]): Solution | "multiple" 
         }
     }
 
-	const solution = eq.map(e => Math.floor(e.y * 1_000_000) / 1_000_000);
-	
-	return solution.some(s => Number.isNaN(s)) ? 'multiple' : solution;
+	const floatSolution = eq.map(e => e.y);;
+	if (floatSolution.some(s => Number.isNaN(s))) return 'multiple';
+
+	const intSolution = floatSolution.map(c => Math.round(c));
+	return isSolutionToLinearSystem(equations, intSolution) ? intSolution : floatSolution;
 }
 
 export function isSolutionToLinearSystem(equations: Equation[], cx: number[]): boolean {
@@ -821,7 +823,7 @@ export function partialLinearSystem(equations: Equation[], c0: number): Equation
     }).slice(1);
 }
 
-export function positiveIntSolutions(equations: Equation[], limit: number = 50000): Solution[] {
+export function positiveIntSolutions(equations: Equation[], limit: number = 101): Solution[] {
     const solution = solveLinearSystem(equations);
 
     // if there is no solution, we can stop looking!
@@ -830,7 +832,7 @@ export function positiveIntSolutions(equations: Equation[], limit: number = 5000
     // if we have a single solution, we only care about it if the
     // coefficients are all positive.
     if (solution !== 'multiple') {
-        if (solution.every(c => c >= 0) && solution.every(c => Number.isInteger(c))) {
+        if (solution.every(c => c >= 0) && solution.every(c => Math.floor(c) === c)) {
             return [solution];
         } else {
             return [];

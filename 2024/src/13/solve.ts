@@ -1,4 +1,4 @@
-import { blocks, transposeArray, sum, Equation, Solution, bestPositiveIntSolution } from '../common/index.js';
+import { blocks, transposeArray, sum, Equation, Solution, bestPositiveIntSolution, solveLinearSystem } from '../common/index.js';
 
 function parseLinearEquations(block: (typeof blocks)[number]): Equation[] {
     const input = [
@@ -27,8 +27,23 @@ function costToPlay([a, b]: Solution): number {
     return a * 3 + b * 1;
 }
 
-const equations = blocks.map(b => parseLinearEquations(b));
-const solutions = equations.map(eq => bestPositiveIntSolution(eq, costToPlay));
-const scores = solutions.filter(Boolean).map(s => costToPlay(s!));
+function equationString(eq: Equation) {
+    return `${eq.x.map((v,i) => `c${i} * ${v}`).join(' + ')} = ${eq.y}`;
+}
 
-console.log(equations, solutions, scores, sum(scores));
+function equationSystemString(eqs: Equation[]) {
+    return eqs.map(eq => equationString(eq)).join('\n');
+}
+
+const equations = blocks.map(b => parseLinearEquations(b));
+
+let part1 = 0;
+for (const eq of equations) {
+    const solution = bestPositiveIntSolution(eq, costToPlay);
+    console.log(equationSystemString(eq));
+    console.log('solution: ', solution);
+    console.log('raw solve: ', solveLinearSystem(eq));
+    console.log();
+    if (solution) part1 += costToPlay(solution);
+}
+console.log('part1', part1);
