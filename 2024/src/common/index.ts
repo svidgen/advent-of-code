@@ -728,3 +728,108 @@ export class AutoPriorityQueue<T extends Prioritized> extends Queue<T> {
 		return this.q.dequeue();
 	}
 }
+
+type Equation = {
+    y: number,
+    x: number[]
+};
+
+type Solution = number[];
+
+/**
+ * Solves a system of linear equations.
+ */
+export function solveLinearSystem(equations: Equation[]): Solution | "multiple" | "unsolvable" {
+	if (!equations.every(e => e.x.length === equations.length)) return 'unsolvable';
+	
+	const eq = equations.map(e => ({
+		y: e.y,
+		x: [...e.x]
+	}));
+
+    for (let i = 0; i < eq.length; i++) {
+        // set the coefficient at the diagonal to 1
+        const cx = eq[i].x[i];
+        
+        for (let xi = 0; xi < eq.length; xi++) {
+            eq[i].x[xi] = eq[i].x[xi] / cx;
+        }
+        eq[i].y = eq[i].y / cx;
+
+        // propagate to other rows, setting all other coefficients at `i` to 0
+        for (let j = 0; j < eq.length; j++) {
+            if (i === j) continue;
+            const coeff = eq[j].x[i];
+            
+            for (let xi = 0; xi < eq.length; xi++) {
+                eq[j].x[xi] = eq[j].x[xi] - eq[i].x[xi] * coeff;
+            }
+            eq[j].y = eq[j].y - eq[i].y * coeff;
+        }
+    }
+
+	const solution = eq.map(e => Math.floor(e.y * 1_000_000) / 1_000_000);
+	
+	return solution.some(s => Number.isNaN(s)) ? 'multiple' : solution;
+}
+
+export function isSolutionToLinearSystem(equations: Equation[], cx: number[]): boolean {
+    for (const eq of equations) {
+        if (sum(eq.x.map((x, i) => x * cx[i])) !== eq.y) return false;
+    }
+    return true;
+}
+
+export function partialLinearSystem(equations: Equation[], c0: number): Equation[] {
+    return equations.map(eq => {
+        const y = eq.y - eq.x[0] * c0;
+        const x = eq.x.slice(1);
+        return { x, y };
+    }).slice(1);
+}
+
+function positiveIntSolutions(equations: Equation[], limit: number = 1000): Solution[] {
+    const solution = solveLinearSystem(equations);
+
+    // if there is no solution, we can stop looking!
+    if (solution === 'unsolvable') return [];
+    
+    // if we have a single solution, we only care about it if the
+    // coefficients are all positive.
+    if (solution !== 'multiple') {
+        if (solution.every(c => c >= 0)) {
+            return [solution];
+        } else {
+            return [];
+        }
+    }
+
+    // otherwise, we have multiple possible solutions. so, we need to enumerate them.
+    let solutions: Solution[] = [];
+    let c = 0;
+    let misses = 0;
+    while (misses < limit) {
+        const partial = partialLinearSystem(equations, c);
+        const subSolutions = positiveIntSolutions(partial);
+        if (subSolutions.length === 0) {
+            misses++;
+        } else {
+            misses = 0;
+            for (const sub of subSolutions) {
+                solutions.push([c, ...sub])
+            }
+        }
+        c++;
+    }
+
+    return solutions;
+}
+
+export function bestPositiveIntSolution(
+	equations: Equation[],
+	score: (eq: Solution) => number
+): Solution | undefined {
+    const solutions = positiveIntSolutions(equations);
+    solutions.sort((a, b) => score(a) - score(b));
+    return solutions.shift();
+}
