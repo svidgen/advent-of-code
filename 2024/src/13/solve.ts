@@ -44,9 +44,26 @@ function solve(eqs: Equation[]): number {
     if (solution) return costToPlay(solution);
     return 0;
 }
+console.log('==========================');
+console.log('=                        =');
+console.log('=    computing part 1    =');
+console.log('=                        =');
+console.log('==========================\n');
+const part1Equations = blocks.map(b => parseLinearEquations(b));
+let part1 = sum(part1Equations.map(s => solve(s)));
 
-const equations = blocks.map(b => parseLinearEquations(b));
-let part1 = sum(equations.map(s => solve(s)));
-
+console.log('==========================');
+console.log('=                        =');
+console.log('=    computing part 2    =');
+console.log('=                        =');
+console.log('==========================\n');
+const part2Equations = blocks
+    .map(b => parseLinearEquations(b))
+    .map(eqs => eqs.map(eq => ({
+        x: eq.x,
+        y: eq.y + 10000000000000
+    })));
+let part2 = sum(part2Equations.map(s => solve(s)));
 
 console.log('part1', part1);
+console.log('part2', part2);
