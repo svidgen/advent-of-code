@@ -44,6 +44,13 @@ export function mod(v: number, m: number): number {
 	return ((v % m) + m) % m;
 }
 
+/**
+ * Shallow copy.
+ */
+export function copy<T extends object>(obj: T): T {
+	return Object.fromEntries(Object.entries(obj)) as T;
+}
+
 export function group<T>(items: T[], groupBy: (item: T) => string): Map<string, T[]> {
 	const groups = new Map<string, T[]>();
 	for (const item of items) {
@@ -310,6 +317,12 @@ export class Grid<T> {
 		this.data[coord.y][coord.x] = value;
 		if (coord.x > this.width) this.width = coord.x;
 		if (coord.y > this.width) this.height = coord.y;
+	}
+
+	setAll(value: T) {
+		for (const coord of this.coords) {
+			this.set(coord, value);
+		}
 	}
 
 	* find(predicate: (item: T) => boolean): Generator<Coord> {
@@ -664,6 +677,157 @@ export class StepTracer<
 	}
 }
 
+export class Region<T> {
+    public coords: Coord[] = [];
+
+    constructor(public grid: Grid<T>, public map: Grid<Region<T> | null>) { }
+
+    static findAll<T>(
+		grid: Grid<T>,
+		{ withOrdinals = false }: { withOrdinals?: boolean } = {}
+	): Set<Region<T>> {
+        const map = Grid.fromDimensions<Region<T> | null>(grid.width, grid.height, () => null);
+        const regions = new Set<Region<T>>();
+        for (const coord of grid.coords) {
+            if (map.get(coord)) continue;
+            const region = new Region(grid, map);
+            region.flood(coord, withOrdinals);
+            regions.add(region);
+        }
+        return regions;
+    }
+
+    flood(coord: Coord, withOrdinals: boolean = false) {
+		const q = new Queue<Coord>();
+		q.enqueue(coord);
+
+		while (!q.isEmpty) {
+			const c = q.dequeue()!;
+
+			if (this.map.get(c)) continue;
+			this.map.set(c, this);
+			this.add(c);
+
+			for (const n of this.grid.neighbors(c, { withOrdinals })) {
+				if (this.grid.get(c) === this.grid.get(n)) q.enqueue(n);
+			}
+		}
+    }
+    
+    private add(coord: Coord) {
+        this.coords.push(coord);
+    }
+
+	get value() {
+		return this.coords.length > 0 ? this.grid.get(this.coords[0]) : undefined;
+	}
+
+    get area() {
+        return this.coords.length;
+    }
+
+    get perimeter() {
+        let perimeter = 0;
+
+        // each coord has 4 sides and so contributes 4 perimeter *minus* the number of
+        // "inside" edges. this can be determined by the number of neighbors it has.
+        for (const coord of this.coords) {
+            let contribution = 4;
+            for (const n of this.map.neighbors(coord, { withOrdinals: false })) {
+                if (this.map.get(n) === this) {
+                    contribution--;
+                }
+            }
+            perimeter += contribution;
+        }
+
+        return perimeter;
+    }
+
+    /**
+     * Count of "sides".
+     * 
+     * A "side" is a contiguous/unbent section of the perimeter.
+     * 
+     * Each cell contributes to the side count based on how many corners it forms.
+     * I.e., if you start following a wall, every time you need to turn, a new side
+     * is formed.
+     * 
+     * ```
+     * ..........
+     * ..O.......
+     * ..OOO.....
+     * .OOOOO....
+     * .OOO.O....
+     * ...O......
+     * ```
+     */
+    get sides() {
+        return this.corners;
+    }
+
+    /**
+     * Count of corners.
+     * 
+     * A cell forms a corner at each "open" ordinal where the corresponding/adjacent
+     * cardinals are the same -- either both "closed" or both "open".
+     * 
+     * ```
+     * !ordinal && cardinalA === cardinalB
+     * ```
+     * 
+     * It also forms a corner if the ordinal is "closed" and the corresponding/adjacent
+     * cardinals are "open". See the "special corner" cases below.
+     * 
+     * ```
+     * ..OOOO....
+     * ..O..O.... // special corner case here!
+     * ..OOO..... // same special case here!
+     * .OOOOO....
+     * .OOO.O....
+     * ...O......
+     * ```
+     * 
+     * So that's:
+     * 
+     * ```
+     * ordinal && !cardinalA && !cardinalB
+     * ```
+     * 
+     * When these rules are combined:
+     * 
+     * ```
+     * (!ordinal && !cardinal) || (ordinal && !cardinals)
+     * ```
+     */
+    get corners() {
+        let corners = 0;
+
+        for (const coord of this.coords) {
+            const [NW, N, NE, W, E, SW, S, SE] = [
+                ...this.map.neighbors(coord, { offGrid: true })
+            ].map(c => this.map.get(c) === this);
+
+            const NECorner = (NE && !N && !E) || (!NE && (N === E)) ? 1 : 0;
+            const NWCorner = (NW && !N && !W) || (!NW && (N === W)) ? 1 : 0;
+            const SECorner = (SE && !S && !E) || (!SE && (S === E)) ? 1 : 0;
+            const SWCorner = (SW && !S && !W) || (!SW && (S === W)) ? 1 : 0;
+
+            corners += NECorner + NWCorner + SECorner + SWCorner;
+        }
+
+        return corners;
+    }
+
+    get visual() {
+        const v = Grid.fromDimensions<string>(this.map.width, this.map.height, () => '.');
+        for (const c of this.coords) {
+            v.set(c, 'O');
+        }
+        return v;
+    }
+}
+
 class QueueNode<T> {
 	constructor(
 		public value: T,
@@ -686,13 +850,11 @@ export class Queue<T> {
 
 	enqueue(item: T) {
 		const node = new QueueNode(item);
-		if (!this.head) {
-			this.head = node;
-		} else if (this.tail) {
+		if (this.tail) {
 			this.tail.next = node;
 			this.tail = node;
 		} else {
-			this.head.next = node;
+			this.head = node;
 			this.tail = node;
 		}
 		this._size++;
@@ -702,6 +864,7 @@ export class Queue<T> {
 		if (this.head) {
 			const item = this.head.value;
 			this.head = this.head.next;
+			if (!this.head) this.tail = undefined;
 			this._size--;
 			return item;
 		}
