@@ -315,8 +315,8 @@ export class Grid<T> {
 		if (!autoExpand && !this.includes(coord)) return;
 		this.data[coord.y] = this.data[coord.y] || [];
 		this.data[coord.y][coord.x] = value;
-		if (coord.x > this.width) this.width = coord.x;
-		if (coord.y > this.width) this.height = coord.y;
+		if (coord.x >= this.width) this.width = coord.x - 1;
+		if (coord.y >= this.width) this.height = coord.y - 1;
 	}
 
 	setAll(value: T) {
@@ -684,20 +684,35 @@ export class Region<T> {
 
     static findAll<T>(
 		grid: Grid<T>,
-		{ withOrdinals = false }: { withOrdinals?: boolean } = {}
+		{
+			withOrdinals = false,
+			ignore = (_coord, _value) => false,
+			fillInto = (from, into) => from === into
+		}: {
+			withOrdinals?: boolean;
+			ignore?: (coord: Coord, value: T | undefined) => boolean,
+			fillInto?: (from: T | undefined, into: T | undefined) => boolean
+		} = {}
 	): Set<Region<T>> {
-        const map = Grid.fromDimensions<Region<T> | null>(grid.width, grid.height, () => null);
+        // const map = Grid.fromDimensions<Region<T> | null>(grid.width, grid.height, () => null);
+		const map = Grid.fromDimensions<Region<T> | null>(0, 0, () => null);
         const regions = new Set<Region<T>>();
         for (const coord of grid.coords) {
             if (map.get(coord)) continue;
+			if (ignore(coord, grid.get(coord))) continue;
             const region = new Region(grid, map);
-            region.flood(coord, withOrdinals);
+            region.flood(coord, withOrdinals, ignore, fillInto);
             regions.add(region);
         }
         return regions;
     }
 
-    flood(coord: Coord, withOrdinals: boolean = false) {
+    flood(
+		coord: Coord,
+		withOrdinals: boolean,
+		ignore: (coord: Coord, value: T | undefined) => boolean,
+		fillInto: (from: T | undefined, into: T | undefined) => boolean
+	) {
 		const q = new Queue<Coord>();
 		q.enqueue(coord);
 
@@ -708,8 +723,10 @@ export class Region<T> {
 			this.map.set(c, this);
 			this.add(c);
 
+			const cv = this.grid.get(c);
 			for (const n of this.grid.neighbors(c, { withOrdinals })) {
-				if (this.grid.get(c) === this.grid.get(n)) q.enqueue(n);
+				const nv = this.grid.get(n);
+				if (!ignore(n, nv) && fillInto(cv, nv)) q.enqueue(n);
 			}
 		}
     }

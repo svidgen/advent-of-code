@@ -1,9 +1,0 @@
-prior to optimization
-
-Settings { width: 101, height: 103 }
-part1 211692000
-part2 6587
-
-real    0m39.589s
-user    0m51.985s
-sys     0m2.684s

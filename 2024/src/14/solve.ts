@@ -164,14 +164,12 @@ function treeNess(coords: Coord[]) {
     return count;
 }
 
-function biggestCluster(coords: Coord[]): number {
-    const trackingGrid = Grid.fromDimensions<number>(width, height);
-    coords.forEach(c => trackingGrid.set(c, 1));
+function biggestCluster(trackingGrid: Grid<boolean>): number {
     const regions = [...Region.findAll(trackingGrid, {
-        withOrdinals: true
+        withOrdinals: true,
+        ignore: (_c, v) => !v
     })];
     const biggest = regions
-        .filter(r => r.value === 1)
         .map(r => r.coords.length)
         .sort(byValue).reverse()[0];
     return biggest;
@@ -211,9 +209,16 @@ function part1() {
 function part2() {
     const ghosts = parseGhosts();
     let scores: number[] = [];
+    const trackingGrid = Grid.fromDimensions(width, height, () => false);
+
     for (let seconds = 0; seconds < 101 * 103; seconds++) {
-        scores.push(biggestCluster(ghosts.map(ghost => ghost.at(seconds))));
+        ghosts.forEach(g => {
+            trackingGrid.set(g.at(seconds - 1), 0);
+            trackingGrid.set(g.at(seconds), 1);
+        })
+        scores.push(biggestCluster(trackingGrid));
     }
+
     const bestScore = [...scores].sort(byValue).reverse()[0];
     return scores.indexOf(bestScore);
 }
