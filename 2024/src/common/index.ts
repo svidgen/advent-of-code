@@ -26,6 +26,24 @@ export function sum(values: number[]): number {
 	return total;
 }
 
+export function product(values: number[]): number {
+	let p = 1;
+	for (const v of values) p *= v;
+	return p;
+}
+
+/**
+ * Calculates `v mod m`, accounting for negative numbers (which JavaScript's)
+ * `%` operator (the "remainder" operator) doesn't do.
+ * 
+ * @param v
+ * @param m
+ * @returns 
+ */
+export function mod(v: number, m: number): number {
+	return ((v % m) + m) % m;
+}
+
 export function group<T>(items: T[], groupBy: (item: T) => string): Map<string, T[]> {
 	const groups = new Map<string, T[]>();
 	for (const item of items) {
@@ -159,6 +177,8 @@ export type Coord = {
 	x: number;
 	y: number;
 }
+
+export type Velocity = Coord;
 
 export type DataCoord<T> = Coord & { data: T };
 
