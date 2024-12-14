@@ -149,8 +149,7 @@ function parseGhosts() {
 function isTreeCoord(coord: Coord): boolean {
     const center = Math.floor(width / 2);
     const dCenter = Math.abs(coord.x - center);
-    return (coord.y <=center && dCenter <= coord.y) || (coord.y > center && dCenter <= 4);
-    // return coord.y === center || dCenter === coord.y;
+    return (coord.y <=center && dCenter <= coord.y) || (coord.y > center && dCenter <= 3);
 }
 
 function treeNess(coords: Coord[]) {
@@ -166,9 +165,11 @@ function treeNess(coords: Coord[]) {
 }
 
 function biggestCluster(coords: Coord[]): number {
-    const g = Grid.fromDimensions(width, height, () => 0);
-    coords.forEach(c => g.set(c, 1));
-    const regions = [...Region.findAll(g, { withOrdinals: true })];
+    const trackingGrid = Grid.fromDimensions<number>(width, height);
+    coords.forEach(c => trackingGrid.set(c, 1));
+    const regions = [...Region.findAll(trackingGrid, {
+        withOrdinals: true
+    })];
     const biggest = regions
         .filter(r => r.value === 1)
         .map(r => r.coords.length)
@@ -183,6 +184,30 @@ function part1() {
         .map(q => ghosts.filter(g => g.isInside(q)).length));
 }
 
+/**
+ * I pre-validated that the ghosts all have the interval. That means we have a
+ * maximum of 101 * 103 steps to look at. So, we're going to look at each one
+ * individually.
+ * 
+ * Full disclosure. I tried 2 things before looking for a hint:
+ * 
+ * 1. I created treeNess function that ranks configurations by how many ghosts
+ * are present in the tree-shape that most-fills the space. IIR, this approach found
+ * a solution *near* the real/final solution at around the 6800 mark. It involved
+ * about 200 ghosts. (See `isTreeCoord` and `treeNess`)
+ * 
+ * 2. I updated the `isTreeCoord` function to rank configurations by how many ghosts
+ * fell strictly on the *outline* of tree shape. This was roughly the same.
+ * 
+ * 3. I updated the `isTreeCoord` to include the "stem". This passed a threshold where
+ * it involved more ghosts. But, still wasn't sufficient for the puzzle.
+ * 
+ * Finally, I googled for a hint, which suggested that I just look for the frame
+ * with the biggest cluster of connected ghosts -- which would *probably* be the
+ * intended tree shape. (It is.)
+ * 
+ * @returns 
+ */
 function part2() {
     const ghosts = parseGhosts();
     let scores: number[] = [];
