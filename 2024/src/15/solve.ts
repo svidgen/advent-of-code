@@ -1,4 +1,4 @@
-import { lines, blocks, Grid, Coord, Direction, computeStep } from '../common/index.js';
+import { blocks, Grid, Direction, ProgrammableCursor } from '../common/index.js';
 
 const [ gridBlock, instructions ] = blocks;
 
@@ -10,79 +10,12 @@ const steps = instructions.raw.trim().split('').map(c => ({
     '<': Direction.west
 }[c]!)).filter(Boolean);
 
+const BOT = '@';
 const WALL = '#';
 const BOX = 'O';
 const OPEN_SPACE = '.';
 
-class ProgrammableCursor<T> {
-    public repr = '@';
-    public location: Coord;
-
-    constructor(
-        public grid: Grid<T>,
-        public start: Coord,
-        public program: {
-            /**
-             * Called after the step is started, but before the ProgrammableCursor
-             * attemps to update the grid with its new location.
-             * 
-             * This allows the callback to manipulate the grid or cursor ahead of
-             * the completion of the step. Useful for things like:
-             * 
-             * 1. Moving the cursor elsewhere
-             * 1. Moving the cursor back to its `from` location. E.g., if it hits a wall.
-             * 1. Pushing items ahead of it.
-             * 
-             * Direction is provided as a convenience and can be provided to a grid's
-             * `searchBeaconAt()` method directly to "look" in the direction the cursor
-             * is headed.
-             * 
-             * This is also where the grid should be updated if drawing/keeping the grid
-             * up to date is desired.
-             * 
-             * @param step 
-             * @returns 
-             */
-            onStep?: (step: {
-                direction: Direction[];
-                from: Coord;
-                into: Coord;
-            }) => void
-
-            /**
-             * The list of steps the cursor will take when run.
-             */
-            steps: Direction[][],
-        }
-    ) {
-        this.location = this.start;
-    }
-
-    step(direction: Direction[]) {
-        const from = this.location;
-        this.location = computeStep(from, direction);
-        this.program.onStep?.({
-            direction,
-            from,
-            into: this.location
-        });
-    }
-
-    run() {
-        for (const direction of this.program.steps) {
-            this.step(direction);
-            // console.log('\n', direction, '\n');
-            // console.log(this.grid.toString());
-            // console.log();
-        }
-    }
-
-    toString() {
-        return this.repr;
-    }
-}
-
-// console.log(grid.toString(), '\n', steps);
+console.log(grid.toString(), '\n');
 
 const bot = new ProgrammableCursor(
     grid,
@@ -105,7 +38,7 @@ const bot = new ProgrammableCursor(
                     grid.set(firstOpenSpace.coord, BOX);
                 }
                 grid.set(from, OPEN_SPACE);
-                grid.set(into, bot.repr);
+                grid.set(into, BOT);
             }
         }
     }
