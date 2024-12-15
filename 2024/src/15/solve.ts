@@ -71,9 +71,9 @@ class ProgrammableCursor<T> {
     run() {
         for (const direction of this.program.steps) {
             this.step(direction);
-            console.log('\n', direction, '\n');
-            console.log(this.grid.toString());
-            console.log();
+            // console.log('\n', direction, '\n');
+            // console.log(this.grid.toString());
+            // console.log();
         }
     }
 
@@ -82,7 +82,7 @@ class ProgrammableCursor<T> {
     }
 }
 
-console.log(grid.toString(), '\n', steps);
+// console.log(grid.toString(), '\n', steps);
 
 const bot = new ProgrammableCursor(
     grid,
@@ -113,4 +113,12 @@ const bot = new ProgrammableCursor(
 
 bot.run();
 
-console.log(grid.toString());
+function score(grid: Grid<string>) {
+    let sum = 0;
+    for (const box of grid.find(c => c === BOX)) {
+        sum += box.y * 100 + box.x;
+    }
+    return sum;
+}
+
+console.log(grid.toString(), score(grid));
