@@ -4,7 +4,7 @@ import * as process from 'process';
 /**
  * The input from the filename specified by the first CLI argument.
  */
-export const raw = fs.readFileSync(process.argv[2], 'utf-8');
+export const raw = process.argv[2] ? fs.readFileSync(process.argv[2], 'utf-8') : '';
 
 /**
  * The input from `raw` as an array of individual lines.
@@ -213,11 +213,13 @@ export class Grid<T> {
 	data: T[][] = []; // in [y][x] orientation
 	width: number = 0;
 	height: number = 0;
+	defaultOnUndefined?: (x: number, y: number) => T;
 
-	constructor(data: T[][]) {
+	constructor(data: T[][], defaultOnUndefined?: ((x: number, y: number) => T)) {
 		this.data = data;
 		this.height = this.calculateHeight();
 		this.width = this.calculateWidth();
+		this.defaultOnUndefined = defaultOnUndefined;
 	}
 
 	static parse(lines: string[]): Grid<string> {
@@ -238,7 +240,7 @@ export class Grid<T> {
 				data[y][x] = _initialize(x, y);
 			}
 		}
-		return new Grid(data);
+		return new Grid(data, _initialize);
 	}
 
 	calculateHeight() {
@@ -259,7 +261,8 @@ export class Grid<T> {
 	}
 
 	get(coord: Coord): T | undefined {
-		return this.data[coord.y]?.[coord.x];
+		const v = this.data[coord.y]?.[coord.x];
+		return v === undefined ? this.defaultOnUndefined?.(coord.x, coord.y) : v;
 	}
 
 	/**
@@ -315,8 +318,8 @@ export class Grid<T> {
 		if (!autoExpand && !this.includes(coord)) return;
 		this.data[coord.y] = this.data[coord.y] || [];
 		this.data[coord.y][coord.x] = value;
-		if (coord.x >= this.width) this.width = coord.x - 1;
-		if (coord.y >= this.width) this.height = coord.y - 1;
+		if (coord.x >= this.width) this.width = coord.x + 1;
+		if (coord.y >= this.width) this.height = coord.y + 1;
 	}
 
 	setAll(value: T) {
@@ -470,10 +473,18 @@ export class Grid<T> {
 		return this.map((v,_c) => v);
 	}
 
-	toString(map: (item: T) => string = String) {
-		return this.data.map(line => 
-			line.map(item => map(item)).join('')
-		).join('\n');
+	toString(map: (item: T | undefined) => string = String) {
+		const stringification: string[] = [];
+		for (let y = 0; y < this.height; y++) {
+			const line = this.data[y] || [];
+			const mappedLine: string[] = [];
+			for (let x = 0; x < this.width; x++) {
+				const d = line[x] === undefined ? (this.defaultOnUndefined?.(x, y)) : line[x];
+				mappedLine.push(map(d));
+			}
+			stringification.push(mappedLine.join(''));
+		}
+		return stringification.join('\n');
 	}
 }
 
