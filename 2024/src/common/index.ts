@@ -198,6 +198,29 @@ export enum Direction {
 
 export type TurnDirection = 'right' | 'left';
 
+export function computeStep(from: Coord, direction: Direction[]): Coord {
+	const result = { x: from.x, y: from.y };
+	for (const d of direction) {
+		switch (d) {
+			case Direction.north:
+				result.y--;
+				break;
+			case Direction.south:
+				result.y++;
+				break;
+			case Direction.east:
+				result.x++;
+				break;
+			case Direction.west:
+				result.x--;
+				break;
+			default:
+				throw new Error('Bad direction!');
+		}
+	}
+	return result;
+}
+
 /**
  * Grid of lines where `y` is inverted (like row number) instead of a
  * mathematical graph. Corners are:
@@ -430,24 +453,59 @@ export class Grid<T> {
 		return results;
 	}
 
-	* searchBeaconAt(coord: Coord, stepping: Direction[]): Generator<T> {
+	* searchBeaconCoordsAt(
+		coord: Coord,
+		stepping: Direction[],
+	) : Generator<Coord> {
 		let x = coord.x;
 		let y = coord.y;
 
 		const stepX =
-			stepping.includes(Direction.north) ? 1
-				: stepping.includes(Direction.south) ? -1
-					: 0;
-		
-		const stepY =
 			stepping.includes(Direction.east) ? 1
 				: stepping.includes(Direction.west) ? -1
 					: 0;
 		
+		const stepY =
+			stepping.includes(Direction.south) ? 1
+				: stepping.includes(Direction.north) ? -1
+					: 0;
+		
 		while (this.includes({ x, y })) {
-			yield this.get({ x, y })!;
+			yield { x, y };
 			x += stepX;
 			y += stepY;
+		}
+	}
+
+	* searchBeaconAt(
+		coord: Coord,
+		stepping: Direction[],
+	) : Generator<T> {
+		for (const c of this.searchBeaconCoordsAt(coord, stepping))
+			yield this.get(c)!;
+	}
+
+	* searchBeaconWithCoordsAt(
+		coord: Coord,
+		stepping: Direction[],
+	) : Generator<{ coord: Coord, value: T }> {
+		for (const c of this.searchBeaconCoordsAt(coord, stepping))
+			yield { coord: c, value: this.get(c)! };
+	}
+
+	* lineOfSight(
+		from: Coord,
+		direction: Direction[],
+		predicate: (cell: { coord: Coord, value: T }) => boolean,
+		inclusive: boolean = false
+	) {
+		for (const cell of this.searchBeaconWithCoordsAt(from, direction)) {
+			if (predicate(cell)) {
+				if (inclusive) yield cell;
+				break;
+			} else {
+				yield cell;
+			}
 		}
 	}
 
@@ -515,23 +573,7 @@ export class Cursor<T = any> {
 			state: this.state
 		});
 		if (direction) this.direction = direction;
-		switch (this.direction) {
-			case Direction.north:
-				this.coord.y--;
-				break;
-			case Direction.south:
-				this.coord.y++;
-				break;
-			case Direction.east:
-				this.coord.x++;
-				break;
-			case Direction.west:
-				this.coord.x--;
-				break;
-			default:
-				throw new Error('Bad direction!');
-				break;
-		}
+		this.coord = computeStep(this.coord, [this.direction]);
 	}
 
 	undo(direction?: Direction) {
