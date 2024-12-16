@@ -1,8 +1,21 @@
-import { blocks, Grid, Direction, ProgrammableCursor } from '../common/index.js';
+import { blocks, Coord, Grid, Direction, ProgrammableCursor, computeStep } from '../common/index.js';
 
 const [ gridBlock, instructions ] = blocks;
 
-const grid = Grid.parse(gridBlock.lines);
+const _part2grid = Grid.parse(
+	gridBlock.lines.map(line => {
+		const chars = line.split('').map(c => {
+			return {
+				'.': '..',
+				'@': '@.',
+				'#': '##',
+				'O': 'O.'
+			}[c]!;
+		});
+		return chars.join('');
+	})
+);
+
 const steps = instructions.raw.trim().split('').map(c => ({
     '^': Direction.north,
     'v': Direction.south,
@@ -12,46 +25,104 @@ const steps = instructions.raw.trim().split('').map(c => ({
 
 const BOT = '@';
 const WALL = '#';
-const BOX = 'O';
+const BOX_LEFT = '[';
+const BOX_RIGHT = ']';
+const BOX_SINGLE = 'O';
+const BOX_START = [BOX_LEFT, BOX_SINGLE];
+const BOX_PART = [BOX_LEFT, BOX_RIGHT, BOX_SINGLE];
 const OPEN_SPACE = '.';
 
-console.log(grid.toString(), '\n');
+type Move = {
+	from: Coord;
+	into: Coord;
+};
 
-const bot = new ProgrammableCursor(
-    grid,
-    [...grid.find(c => c === '@')].shift()!,
-    {
-        steps: steps.map(s => [s]),
-        onStep: ({ direction, from, into }) => {
-            const los = [...grid.lineOfSight(into, direction, c => c.value === WALL)];
-            const firstOpenSpace = los.find(s => s.value === OPEN_SPACE);
-            const adjacentBox = los[0]?.value === BOX ? los[0] : null;
-            if (!firstOpenSpace) {
-                // no open space. move the bot back from whence it came.
-                bot.location = from;
-                return;
-            } else {
-                if (adjacentBox) {
-                    // pushing all the boxes back into the open space is the same (for us)
-                    // as just moving the adjacent box into the first open space.
-                    grid.set(adjacentBox.coord, OPEN_SPACE);
-                    grid.set(firstOpenSpace.coord, BOX);
-                }
-                grid.set(from, OPEN_SPACE);
-                grid.set(into, BOT);
-            }
-        }
-    }
-);
+function makeBot(grid: Grid<string>) {
 
-bot.run();
+	function canMove(from: Coord, direction: Direction): Move[] | false {
+		const v = grid.get(from)!;
+
+		if (!BOX_PART.includes(v)) return [];
+
+		const intoCoord = computeStep(from, [direction]);
+		const intoValue = grid.get(intoCoord);
+
+		const intoIsOpen = intoValue === OPEN_SPACE;
+
+		if (
+			[Direction.north, Direction.south].includes(direction)
+			&& [BOX_LEFT, BOX_RIGHT].includes(v)
+		) {
+			const otherSideDir = v === BOX_LEFT ? Direction.east : Direction.west;
+			const otherSideCoord = computeStep(from, [otherSideDir]);
+
+			const otherSideMoves = canMove(otherSideCoord, direction);
+			if (!otherSideMoves) return false;
+
+			if (intoIsOpen) {
+				return [...otherSideMoves, { from, into: intoCoord }];
+			}
+
+			const downstreamMoves = canMove(intoCoord, direction);
+			if (!downstreamMoves) return false;
+
+			return [
+				...downstreamMoves,
+				...otherSideMoves,
+				{ from, into: intoCoord }
+			];
+		} 
+
+		if (intoIsOpen) {
+			return [{ from, into: intoCoord }];
+		}
+
+		const downstreamMoves = canMove(intoCoord, direction);
+		if (!downstreamMoves) return false;
+
+		return [...downstreamMoves, { from, into: intoCoord }];
+	}
+
+	function executeMoves(moves: Move[]) {
+		for (const move of moves) {
+			grid.set(move.into, grid.get(move.from)!);
+			grid.set(move.from, OPEN_SPACE);
+		}
+	}
+
+	const bot = new ProgrammableCursor(
+		grid,
+		[...grid.find(c => c === '@')].shift()!,
+		{
+			steps: steps.map(s => [s]),
+			onStep: ({ direction, from, into }) => {
+				const moves = canMove(into, direction[0]);
+				if (moves) {
+					executeMoves(moves);
+				} else {
+					bot.location = from;
+				}
+			}
+		}
+	);
+	return bot;
+}
+	
+function part1() {
+	const grid = Grid.parse(gridBlock.lines);
+	console.log(grid.toString(), '\n');
+	makeBot(grid).run();
+	return grid;
+}
 
 function score(grid: Grid<string>) {
     let sum = 0;
-    for (const box of grid.find(c => c === BOX)) {
+    for (const box of grid.find(c => BOX_START.includes(c))) {
         sum += box.y * 100 + box.x;
     }
     return sum;
 }
 
-console.log(grid.toString(), score(grid));
+const part1Grid = part1();
+
+console.log(part1Grid.toString(), score(part1Grid));
