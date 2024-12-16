@@ -574,6 +574,7 @@ export class Cursor<T = any> {
 		});
 		if (direction) this.direction = direction;
 		this.coord = computeStep(this.coord, [this.direction]);
+		return this;
 	}
 
 	undo(direction?: Direction) {
@@ -603,6 +604,7 @@ export class Cursor<T = any> {
 			[Direction.west]: [Direction.north, Direction.south],
 		};
 		this.direction = turns[this.direction][offset];
+		return this;
 	}
 
 	get isEastWest() {
@@ -1051,6 +1053,12 @@ export class PriorityQueue<T> {
 		if (this._size === 0) this.min = EMPTY;
 
 		return item;
+	}
+
+	* [Symbol.iterator]() {
+		while (!this.isEmpty) {
+			yield this.dequeue()!;
+		}
 	}
 }
 
