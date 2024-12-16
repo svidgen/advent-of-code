@@ -47,6 +47,8 @@ function makeBot(grid: Grid<string>) {
 		const intoCoord = computeStep(from, [direction]);
 		const intoValue = grid.get(intoCoord);
 
+		if (intoValue === WALL) return false;
+
 		const intoIsOpen = intoValue === OPEN_SPACE;
 
 		if (
@@ -67,11 +69,11 @@ function makeBot(grid: Grid<string>) {
 			if (!downstreamMoves) return false;
 
 			return [
-				...downstreamMoves,
 				...otherSideMoves,
+				...downstreamMoves,
 				{ from, into: intoCoord }
 			];
-		} 
+		}
 
 		if (intoIsOpen) {
 			return [{ from, into: intoCoord }];
@@ -92,19 +94,31 @@ function makeBot(grid: Grid<string>) {
 
 	const bot = new ProgrammableCursor(
 		grid,
-		[...grid.find(c => c === '@')].shift()!,
+		[...grid.find(c => c === BOT)].shift()!,
 		{
 			steps: steps.map(s => [s]),
 			onStep: ({ direction, from, into }) => {
+				if (grid.get(into) === WALL) {
+					bot.location = from;
+					return;
+				}
+
 				const moves = canMove(into, direction[0]);
 				if (moves) {
 					executeMoves(moves);
+					grid.set(from, OPEN_SPACE);
+					grid.set(into, BOT);
 				} else {
 					bot.location = from;
 				}
+
+				// console.log(direction[0]);
+				// console.log(grid.toString());
+				// console.log();
 			}
 		}
 	);
+
 	return bot;
 }
 	
