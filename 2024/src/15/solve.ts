@@ -2,14 +2,14 @@ import { blocks, Coord, Grid, Direction, ProgrammableCursor, computeStep } from 
 
 const [ gridBlock, instructions ] = blocks;
 
-const _part2grid = Grid.parse(
+const part2grid = Grid.parse(
 	gridBlock.lines.map(line => {
 		const chars = line.split('').map(c => {
 			return {
 				'.': '..',
 				'@': '@.',
 				'#': '##',
-				'O': 'O.'
+				'O': '[]'
 			}[c]!;
 		});
 		return chars.join('');
@@ -39,7 +39,15 @@ type Move = {
 
 function makeBot(grid: Grid<string>) {
 
-	function canMove(from: Coord, direction: Direction): Move[] | false {
+	function canMove(
+		from: Coord,
+		direction: Direction,
+		alreadyMoved = new Set<string>()
+	): Move[] | false {
+		const k = `${from.x},${from.y}`;
+		if (alreadyMoved.has(k)) return [];
+		alreadyMoved.add(k);
+
 		const v = grid.get(from)!;
 
 		if (!BOX_PART.includes(v)) return [];
@@ -58,19 +66,19 @@ function makeBot(grid: Grid<string>) {
 			const otherSideDir = v === BOX_LEFT ? Direction.east : Direction.west;
 			const otherSideCoord = computeStep(from, [otherSideDir]);
 
-			const otherSideMoves = canMove(otherSideCoord, direction);
+			const otherSideMoves = canMove(otherSideCoord, direction, alreadyMoved);
 			if (!otherSideMoves) return false;
 
 			if (intoIsOpen) {
 				return [...otherSideMoves, { from, into: intoCoord }];
 			}
 
-			const downstreamMoves = canMove(intoCoord, direction);
+			const downstreamMoves = canMove(intoCoord, direction, alreadyMoved);
 			if (!downstreamMoves) return false;
 
 			return [
-				...otherSideMoves,
 				...downstreamMoves,
+				...otherSideMoves,
 				{ from, into: intoCoord }
 			];
 		}
@@ -79,7 +87,7 @@ function makeBot(grid: Grid<string>) {
 			return [{ from, into: intoCoord }];
 		}
 
-		const downstreamMoves = canMove(intoCoord, direction);
+		const downstreamMoves = canMove(intoCoord, direction, alreadyMoved);
 		if (!downstreamMoves) return false;
 
 		return [...downstreamMoves, { from, into: intoCoord }];
@@ -129,6 +137,12 @@ function part1() {
 	return grid;
 }
 
+function part2() {
+	console.log(part2grid.toString(), '\n');
+	makeBot(part2grid).run();
+	return part2grid;
+}
+
 function score(grid: Grid<string>) {
     let sum = 0;
     for (const box of grid.find(c => BOX_START.includes(c))) {
@@ -137,6 +151,8 @@ function score(grid: Grid<string>) {
     return sum;
 }
 
-const part1Grid = part1();
+// const part1Grid = part1();
+const part2Grid = part2();
 
-console.log(part1Grid.toString(), score(part1Grid));
+// console.log(part1Grid.toString(), score(part1Grid));
+console.log(part2Grid.toString(), score(part2Grid));
