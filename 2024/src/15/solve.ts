@@ -151,8 +151,8 @@ function score(grid: Grid<string>) {
     return sum;
 }
 
-// const part1Grid = part1();
+const part1Grid = part1();
 const part2Grid = part2();
 
-// console.log(part1Grid.toString(), score(part1Grid));
+console.log(part1Grid.toString(), score(part1Grid));
 console.log(part2Grid.toString(), score(part2Grid));
