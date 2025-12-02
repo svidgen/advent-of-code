@@ -1,0 +1,11 @@
+R1   -> 51;  +0 =  0  // right non crossing 0
+R49  ->  0;  +1 =  1  // right hitting 0 exactly 
+R100 ->  0;  +1 =  2  // at zero, back to zero in single rotation.
+R50  -> 50;  +0 =  2  // right moving off of zero
+R100 -> 50;  +1 =  3  // right 1 full rotation
+R120 -> 70;  +1 =  4  // right 1 full rotation + extra non crossing 0
+R190 -> 60;  +2 =  6  // right 1 full rotation + extra crossing 0
+R140 ->  0;  +2 =  8  // right 1 full rotation + extra hitting 0 exactly
+R0   ->  0;  +0 =  0  // right 0 at zero
+R1   ->  1;  +0 =  0  // reposition
+R0   ->  2;  +0 =  0  // right 0 at non-zero
