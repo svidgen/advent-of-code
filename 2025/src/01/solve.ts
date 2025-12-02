@@ -52,9 +52,27 @@ function part2() {
 		position = newPosition;
 		atZero = newAtZero;
 	}
-	console.table(log);
+	// console.table(log);
+	return atZero;
+}
+
+// because something is being double-counted with my "real" part2 ... 
+function part2BruteForce() {
+	let atZero = 0;
+	let position = 50;
+	for (const turn of turns) {
+		const ticks = Math.abs(turn);
+		const isPositive = turn > 0;
+		for (let i = 0; i < ticks; i++) {
+			if (isPositive) { position++ } else { position-- };
+			if (position === 100) position = 0;
+			if (position === -1) position = 99;
+			if (position === 0) atZero++;
+		}
+	}
 	return atZero;
 }
 
 console.log('part 1: ', part1());
 console.log('part 2: ', part2());
+console.log('part 2 check: ', part2BruteForce());
