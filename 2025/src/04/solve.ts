@@ -23,4 +23,23 @@ function part1() {
 	return total;
 }
 
+function part2() {
+	let totalRemoved = 0;
+	let removalList: Coord[] = [];
+
+	do {
+		totalRemoved += removalList.length;
+
+		// separate remove aggregation from actual removal to prevent
+		// removal from changing the math (counting) as we go.
+		removalList = Array.from(map.coords).filter(c => canBeAccessed(c));
+		for (const c of removalList) {
+			map.set(c, '.');
+		}
+	} while (removalList.length > 0);
+
+	return totalRemoved;
+}
+
 console.log('part 1', part1());
+console.log('part 2', part2());
