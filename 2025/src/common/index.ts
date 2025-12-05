@@ -1193,7 +1193,7 @@ export function bestPositiveIntSolution(
     return solutions.shift();
 }
 
-export class Range {
+export class InclusiveRange {
 	constructor(
 		public start: number,
 		public end: number
@@ -1201,13 +1201,35 @@ export class Range {
 
 	static parse(line: string) {
 		const [start, end] = line.split('-').map(s => parseInt(s));
-		return new Range(start, end);
+		return new InclusiveRange(start, end);
 	}
 
-	includes(n: number, { inclusiveEnd = false }: { inclusiveEnd?: boolean } = {}) {
-		return (
-			n >= this.start &&
-			(inclusiveEnd ? ( n <= this.end ) : n < this.end)
+	static sortByRangeEndAscending(ranges: InclusiveRange[]): InclusiveRange[] {
+		return ranges.sort((a, b) => a.end - b.end);
+	}
+
+	get length() {
+		return 1 + (this.end - this.start);
+	}
+
+	includes(n: number) {
+		return (n >= this.start && n <= this.end);
+	}
+
+	overlaps(other: InclusiveRange) {
+		if (this.start <= other.end && this.end >= other.start) return true;
+	}
+
+	/**
+	 * WARNING: Expands this range two inclusive ranges into one *blindly assuming they overlap.*
+	 * 
+	 * @param other 
+	 * @returns 
+	 */
+	combine(other: InclusiveRange): InclusiveRange {
+		return new InclusiveRange(
+			Math.min(this.start, other.start),
+			Math.max(this.end, other.end)
 		);
 	}
 }
