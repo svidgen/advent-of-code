@@ -1192,3 +1192,22 @@ export function bestPositiveIntSolution(
     solutions.sort((a, b) => score(a) - score(b));
     return solutions.shift();
 }
+
+export class Range {
+	constructor(
+		public start: number,
+		public end: number
+	) {}
+
+	static parse(line: string) {
+		const [start, end] = line.split('-').map(s => parseInt(s));
+		return new Range(start, end);
+	}
+
+	includes(n: number, { inclusiveEnd = false }: { inclusiveEnd?: boolean } = {}) {
+		return (
+			n >= this.start &&
+			(inclusiveEnd ? ( n <= this.end ) : n < this.end)
+		);
+	}
+}
