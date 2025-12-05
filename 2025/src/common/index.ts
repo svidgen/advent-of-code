@@ -1208,6 +1208,38 @@ export class InclusiveRange {
 		return direction === 'ASC' ? ranges.sort((a, b) => a.end - b.end) : ranges.sort((a, b) => b.end - a.end);
 	}
 
+	/**
+	 * Boils a bunch of ranges down into the smallest number of ranges needed to represent
+	 * the intended values.
+	 * 
+	 * This is done by repeatedly sorting and combining the ranges until no more overlaps
+	 * are present.
+	 * 
+	 * @param ranges 
+	 */
+	static boil(ranges: InclusiveRange[], alreadySorted = false): InclusiveRange[] {
+		let rangesBeingProcessed = alreadySorted ? ranges : InclusiveRange.sortByEnd([...ranges]);
+
+		while (true) {
+			const round = singleBoil(rangesBeingProcessed);
+			if (!round.workWasDone) return round.combined;
+			rangesBeingProcessed = round.combined;
+		}
+
+		function singleBoil(_ranges: InclusiveRange[]): { combined: InclusiveRange[], workWasDone: boolean } {
+			const combined: InclusiveRange[] = [];
+			for (const range of _ranges) {
+				const last = combined[combined.length - 1];
+				if (last?.overlaps(range)) {
+					last.expand(range);
+				} else {
+					combined.push(range.copy());
+				}
+			}
+			return { combined, workWasDone: _ranges.length !== combined.length };
+		}
+	}
+
 	get length() {
 		return 1 + (this.end - this.start);
 	}
