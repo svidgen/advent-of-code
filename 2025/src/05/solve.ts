@@ -5,8 +5,8 @@ const [
 	{ lines: linesOfAvailable }
 ] = blocks;
 
-const freshIngredientRanges = InclusiveRange.sortByRangeEndAscending(
-	linesOfFreshRanges.map(l => InclusiveRange.parse(l))
+const freshIngredientRanges = InclusiveRange.sortByEnd(
+	linesOfFreshRanges.map(l => InclusiveRange.parse(l)), 'ASC'
 );
 const availableIngredients = linesOfAvailable.map(l => parseInt(l));
 
@@ -22,9 +22,9 @@ function part2() {
 	for (const range of freshIngredientRanges) { 		// already sorted
 		const last = combinedRanges[combinedRanges.length - 1];
 		if (last?.overlaps(range)) {
-			combinedRanges[combinedRanges.length - 1] = last.combine(range);
+			last.expand(range);
 		} else {
-			combinedRanges.push(range);
+			combinedRanges.push(range.copy());
 		}
 	}
 	return sum(combinedRanges.map(r => r.length));

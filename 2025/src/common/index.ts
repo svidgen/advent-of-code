@@ -1204,8 +1204,8 @@ export class InclusiveRange {
 		return new InclusiveRange(start, end);
 	}
 
-	static sortByRangeEndAscending(ranges: InclusiveRange[]): InclusiveRange[] {
-		return ranges.sort((a, b) => a.end - b.end);
+	static sortByEnd(ranges: InclusiveRange[], direction: 'ASC' | 'DESC' = 'ASC'): InclusiveRange[] {
+		return direction === 'ASC' ? ranges.sort((a, b) => a.end - b.end) : ranges.sort((a, b) => b.end - a.end);
 	}
 
 	get length() {
@@ -1221,15 +1221,22 @@ export class InclusiveRange {
 	}
 
 	/**
-	 * WARNING: Expands this range two inclusive ranges into one *blindly assuming they overlap.*
+	 * WARNING: Creates a combined InclusiveRange *blindly assuming `this` overlaps `other`.*
 	 * 
 	 * @param other 
 	 * @returns 
 	 */
 	combine(other: InclusiveRange): InclusiveRange {
-		return new InclusiveRange(
-			Math.min(this.start, other.start),
-			Math.max(this.end, other.end)
-		);
+		return this.copy().expand(other);
+	}
+
+	copy() {
+		return new InclusiveRange(this.start, this.end);
+	}
+
+	expand(other: InclusiveRange): InclusiveRange {
+		this.start = Math.min(this.start, other.start);
+		this.end = Math.max(this.end, other.end);
+		return this;
 	}
 }
