@@ -83,7 +83,7 @@ function part2_2() {
 		const operation = line[line.length - 1].trim();
 		operands.push(parseInt(line));
 		if (operation === '*' || operation === '+') {
-			total += doMath({ operands, operation } as any);
+			total += doMath({ operands, operation });
 			operands = [];
 		}
 	}
