@@ -245,9 +245,12 @@ export class Grid<T> {
 		this.defaultOnUndefined = defaultOnUndefined;
 	}
 
-	static parse(lines: string[]): Grid<string> {
+	static parse(
+		lines: string[],
+		defaultOnUndefined: () => string = () => ''
+	): Grid<string> {
 		const data = lines.map(line => line.split('')); 
-		return new Grid(data);
+		return new Grid(data, defaultOnUndefined);
 	}
 
 	static fromDimensions<T = string>(
@@ -342,7 +345,7 @@ export class Grid<T> {
 		this.data[coord.y] = this.data[coord.y] || [];
 		this.data[coord.y][coord.x] = value;
 		if (coord.x >= this.width) this.width = coord.x + 1;
-		if (coord.y >= this.width) this.height = coord.y + 1;
+		if (coord.y >= this.height) this.height = coord.y + 1;
 	}
 
 	setAll(value: T) {
@@ -379,7 +382,7 @@ export class Grid<T> {
 
 	horizontal(y: number): T[] {
 		let items: T[] = [];
-		for (let x = 0; x < this.height; x++) {
+		for (let x = 0; x < this.width; x++) {
 			items.push(this.get({x, y})!);
 		}
 		return items;
@@ -411,6 +414,14 @@ export class Grid<T> {
 		for (let y = 0; y < this.height; y++) {
 			this.setHorizontal(y, h[y]);
 		}
+	}
+
+	get rows() {
+		return this.horizontals;
+	}
+
+	get cols() {
+		return this.verticals;
 	}
 
 	private *_coords() {
@@ -529,6 +540,20 @@ export class Grid<T> {
 
 	copy() {
 		return this.map((v,_c) => v);
+	}
+
+	rotateLeft() {
+		const out = Grid.fromDimensions(
+			this.height,
+			this.width,
+			this.defaultOnUndefined
+		)
+		for (const c of this.coords) {
+			const x = c.y;
+			const y = this.width - c.x - 1;
+			out.set({ x, y }, this.get(c)!);
+		}
+		return out;
 	}
 
 	toString(map: (item: T | undefined) => string = String) {

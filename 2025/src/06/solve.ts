@@ -14,6 +14,9 @@ function doMath(eq: Equation) {
 	return t;
 }
 
+const joined = (s: string[]) => s.join('');
+const nonEmpty = (s: string) => s.trim() !== '';
+
 function part1() {
 	const data = transposeArray(lines.map(l => l.trim().split(/\s+/)));
 	const equations = data.map(d => {
@@ -61,5 +64,33 @@ function part2() {
 	return total;
 }
 
+/**
+ * Not exactly shorter than my original solution if we consider grid rotation
+ * math as part of the solution. But, conceptually a neater and tidier solution
+ * IMHO.
+ * 
+ * @returns 
+ */
+function part2_2() {
+	const grid = Grid.parse(lines, () => ' ');
+	const rotated = grid.rotateLeft();
+	const rotatedLines = rotated.rows.map(joined).filter(nonEmpty);
+
+	let total = 0;
+	let operands: number[] = [];
+
+	for (let line of rotatedLines) {
+		const operation = line[line.length - 1].trim();
+		operands.push(parseInt(line));
+		if (operation === '*' || operation === '+') {
+			total += doMath({ operands, operation } as any);
+			operands = [];
+		}
+	}
+
+	return total;
+}
+
 console.log('part 1', part1());
 console.log('part 2', part2());
+console.log('part 2.2', part2_2());
