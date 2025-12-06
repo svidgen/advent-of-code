@@ -1,0 +1,18 @@
+{
+  "editor.insertSpaces": false,
+  "editor.tabSize": 4,
+  "editor.detectIndentation": false,
+  "editor.useTabStops": true,
+  "[typescript]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  },
+  "[javascript]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  },
+  "[json]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  }
+}
