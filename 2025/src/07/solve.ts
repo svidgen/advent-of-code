@@ -1,4 +1,4 @@
-import { Grid, lines, sum, transposeArray } from '../common/index.js';
+import { lines, sum } from '../common/index.js';
 
 function part1() {
 	let count = 0;
@@ -23,6 +23,23 @@ function part1() {
 }
 
 function part2() {
+	let state : number[] | undefined = undefined;
+	for (const line of lines) {
+		if (state === undefined) {
+			state = line.split('').map(c => c === 'S' ? 1 : 0);
+			continue;
+		}
+
+		const splits = line.split('').map(c => c === '^' ? true : false);
+		for (let i = 0; i < splits.length; i++) {
+			if (splits[i] && state[i]) {
+				if (i > 0) state[i - 1] += state[i];
+				if (i < state.length - 1) state[i + 1] += state[i];
+				state[i] = 0;
+			}
+		}
+	}
+	return sum(state!);
 }
 
 console.log('part 1', part1());
