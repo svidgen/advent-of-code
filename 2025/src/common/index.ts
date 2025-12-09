@@ -180,6 +180,16 @@ export function index<T>(items: T[]): Map<T, number[]> {
 	return index;
 }
 
+export function selfJoin<T>(items: T[], bidirectional: boolean = false): { a: T, b: T }[] {
+	let results: { a: T, b: T}[] = [];
+	for (let i = 0; i < items.length; i++) {
+		for (let j = bidirectional ? 0 : i + 1; j < items.length; j++) {
+			results.push({ a: items[i], b: items[j] });
+		}
+	}
+	return results;
+}
+
 export type Coord = {
 	x: number;
 	y: number;
