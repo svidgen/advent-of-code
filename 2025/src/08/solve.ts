@@ -140,70 +140,53 @@ class Space {
 	get AllPossibleEdges() {
 		return this._AllPossibleEdges();
 	}
+
+	findClusters<T extends number | undefined>(limitEdges: T): T extends undefined ? Edge[] : Cluster[] {
+		const visitedPoints = new Set<string>();
+		const edges = Array.from(this.AllPossibleEdges).sort(Edge.byDistance);
+		const clusters: Cluster[] = [];
+		const visitedEdges: Edge[] = [];
+
+		for (const edge of limitEdges ? edges.slice(0, limitEdges) : edges) {
+			const touchingClusters = clusters.filter(c => c.touches(edge));
+			if (touchingClusters.length === 0) {
+				clusters.push(new Cluster([edge]));
+			} else if (touchingClusters.length === 1) {
+				touchingClusters[0].add(edge);
+			} else if (touchingClusters.length === 2) {
+				touchingClusters[0].cannibalize(touchingClusters[1]);
+				const indexB = clusters.indexOf(touchingClusters[1]);
+				clusters.splice(indexB, 1);
+			}
+
+			visitedPoints.add(edge.a.toString());
+			visitedPoints.add(edge.b.toString());
+			const allPointsConsumed = visitedPoints.size === this.points.length;
+			const allOneCluster = clusters.length === 1;
+
+			visitedEdges.push(edge);
+			
+			if (allPointsConsumed && allOneCluster) {
+				break;
+			}
+		}
+
+		return (typeof limitEdges === 'undefined' ? visitedEdges : clusters) as any;
+	}
 }
 
 function part1() {
 	const space = Space.parse(lines);
-
-	// naively looking at ALL possible edges, since we have a relatively small
-	// number of edges (< 500k) to deal with.
-	const edges = Array.from(space.AllPossibleEdges).sort(Edge.byDistance);
-	const clusters: Cluster[] = [];
-
-	for (const edge of edges.slice(0, EDGE_LIMIT)) {
-		const touchingClusters = clusters.filter(c => c.touches(edge));
-		if (touchingClusters.length === 0) {
-			clusters.push(new Cluster([edge]));
-		} else if (touchingClusters.length === 1) {
-			touchingClusters[0].add(edge);
-		} else if (touchingClusters.length === 2) {
-			touchingClusters[0].cannibalize(touchingClusters[1]);
-			const indexB = clusters.indexOf(touchingClusters[1]);
-			clusters.splice(indexB, 1);
-		}
-	}
-
+	const clusters = space.findClusters(EDGE_LIMIT);
 	clusters.sort(Cluster.bySize).reverse();
 	return product(clusters.slice(0, 3).map(c => c.size));
 }
 
 function part2() {
 	const space = Space.parse(lines);
-	const consumedPoints = new Set<string>();
-
-	// naively looking at ALL possible edges, since we have a relatively small
-	// number of edges (< 500k) to deal with.
-	const edges = Array.from(space.AllPossibleEdges).sort(Edge.byDistance);
-	const clusters: Cluster[] = [];
-	let lastConsideredEdge: Edge | undefined = undefined;
-
-	for (const edge of edges) {
-		const touchingClusters = clusters.filter(c => c.touches(edge));
-		if (touchingClusters.length === 0) {
-			clusters.push(new Cluster([edge]));
-		} else if (touchingClusters.length === 1) {
-			touchingClusters[0].add(edge);
-		} else if (touchingClusters.length === 2) {
-			touchingClusters[0].cannibalize(touchingClusters[1]);
-			const indexB = clusters.indexOf(touchingClusters[1]);
-			clusters.splice(indexB, 1);
-		}
-
-		lastConsideredEdge = edge;
-		consumedPoints.add(edge.a.toString());
-		consumedPoints.add(edge.b.toString());
-		const allPointsConsumed = consumedPoints.size === space.points.length;
-		const allOneCluster = clusters.length === 1;
-		
-		if (allPointsConsumed && allOneCluster) {
-			break;
-		}
-	}
-
-	return {
-		lastConsideredEdge: lastConsideredEdge!.toString(),
-		solution: lastConsideredEdge!.a.coords[0] * lastConsideredEdge!.b.coords[0]
-	}
+	const edges = space.findClusters(undefined);
+	const bottleneck = edges.pop();
+	return bottleneck!.a.coords[0] * bottleneck!.b.coords[0]
 }
 
 console.log('part 1', part1());
