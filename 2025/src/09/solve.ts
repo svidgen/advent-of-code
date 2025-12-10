@@ -222,9 +222,26 @@ function writeSvgFromPoints(filePath: string, points: Coord[]) {
 		/>`
 	).join('\n');
 
+	const labels = points
+		.map((p, i) =>`
+			<text
+				x="${p.x + (i % 2 === 0 ? 600 : -600)}"
+				y="${p.y + (i % 2 === 0 ? 300 : -300)}"
+				font-size="400" fill="red">(${p.x},${p.y})</text>
+			<line
+				x1="${p.x}" y1="${p.y}"
+				x2="${p.x + (i % 2 === 0 ? 600 : -600)}"
+				y2="${p.y + (i % 2 === 0 ? 300 : -300)}"
+				stroke="gray" stroke-width="30"
+			/>
+			`
+		)
+		.join("\n  ");
+
 	const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${maxX} ${maxY + 100}" style="width: 100vw; height 100vh">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${maxX} ${maxY + 500}" style="width: 100vw; height 100vh">
   <path d="${d}" stroke="black" stroke-width="100" fill="none" />
+  ${labels}
   ${optionsHighlight}
 </svg>
 `.trim();
