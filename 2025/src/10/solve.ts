@@ -96,8 +96,7 @@ class Button {
 
 function part1() {
 	const machines = lines.map(line => Machine.parse(line));
-	const solutions = machines.map(m => m.solve()).map(s => s?.priority);
-	console.dir(solutions, {depth: null});
+	const solutions = machines.map(m => m.solve()).map(s => s!.priority);
 	return sum(solutions);
 }
 
