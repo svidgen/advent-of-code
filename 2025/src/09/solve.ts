@@ -92,8 +92,8 @@ const coords: Coord[] = lines.map(line => {
  * @returns 
  */
 function blockArea(a: Coord, b: Coord) {
-	const width = Math.abs(1 + a.x - b.x);
-	const height = Math.abs(1 + a.y - b.y);
+	const width = 1 + Math.abs((a.x - b.x));
+	const height = 1 + Math.abs((a.y - b.y));
 	return width * height;
 }
 
@@ -171,22 +171,14 @@ function part1() {
 function part2() {
 	const segments = makeSegments();
 	const logging = [] as LogRecord[];
-	// console.dir({ segments }, { depth: null });
-	// const combos = selfJoin(coords)
-	// 	.map(c => ({
-	// 		c,
-	// 		isValid: isValid(c.a, c.b, coords, segments),
-	// 		area: blockArea(c.a, c.b)
-	// 	}))
-	// 	.filter(i => i.isValid);
-	// console.dir(combos, { depth: null });
 
 	const result = selfJoin(coords)
 		.filter(({ a, b }) => isValid(a, b, coords, segments, logging))
 		.map(({ a, b }) => blockArea(a, b))
 		.sort(byValue).pop();
 
-	console.table(logging.filter(l => blockArea(l.a, l.b) > 1461954456));
+	// troubleshooting
+	// console.table(logging.filter(l => blockArea(l.a, l.b) > 1461954456));
 
 	return result;
 }
@@ -201,7 +193,7 @@ function writeSvgFromPoints(filePath: string, points: Coord[]) {
 			a, b,
 			area: blockArea(a, b)
 		}))
-		.sort((a, b) => a.area - b.area).reverse().slice(0, 2);
+		.sort((a, b) => a.area === b.area ? 0 : (a.area > b.area ? 1 : 0)).reverse().slice(0, 2);
 
 	// Determine SVG size from bounds
 	const maxX = Math.max(...points.map(p => p.x));

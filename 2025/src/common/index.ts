@@ -153,8 +153,8 @@ export function mapGrid<FROM, TO>(grid: FROM[][], map: ((v: FROM) => TO)): TO[][
  * @param a 
  * @param b 
  */
-export function byValue(a: number, b: number): number {
-	return a - b;
+export function byValue<T extends number | bigint>(a: T, b: T): number {
+	return a === b ? 0 : (a > b ? 1 : -1);
 }
 
 export function zipMap<FROM, TO>(
