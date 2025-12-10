@@ -195,13 +195,13 @@ function writeSvgFromPoints(filePath: string, points: Coord[]) {
 	if (!points.length) throw new Error("Expected at least one point");
 
 	const segments = makeSegments();
-	const s = selfJoin(coords)
+	const options = selfJoin(coords)
 		.filter(({ a, b }) => isValid(a, b, coords, segments, []))
 		.map(({ a, b }) => ({
 			a, b,
 			area: blockArea(a, b)
 		}))
-		.sort((a, b) => a.area - b.area).pop();
+		.sort((a, b) => a.area - b.area).reverse().slice(0, 2);
 
 	// Determine SVG size from bounds
 	const maxX = Math.max(...points.map(p => p.x));
@@ -213,16 +213,19 @@ function writeSvgFromPoints(filePath: string, points: Coord[]) {
 	const lineTos = rest.map(p => `L${p.x} ${p.y}`).join(" ");
 	const d = `${moveTo}${rest.length ? " " + lineTos + " Z" : ""}`;
 
+	const optionsHighlight = options.map(o => `<rect
+			x="${Math.min(o.a.x, o.b.x)}"
+			y="${Math.min(o.a.y, o.b.y)}"
+			width="${Math.abs(o.a.x - o.b.x)}"
+			height="${Math.abs(o.a.y - o.b.y)}"
+			style="stroke:red; stroke-width:50; fill:#0c0; opacity: 25%;"
+		/>`
+	).join('\n');
+
 	const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${maxX} ${maxY + 100}" style="width: 100vw; height 100vh">
   <path d="${d}" stroke="black" stroke-width="100" fill="none" />
-  <rect
-  	x="${Math.min(s!.a.x, s!.b.x)}"
-	y="${Math.min(s!.a.y, s!.b.y)}"
-  	width="${Math.abs(s!.a.x - s!.b.x)}"
-	height="${Math.abs(s!.a.y - s!.b.y)}"
-	style="stroke:red; stroke-width:1; fill:#cfc;"
-	/>
+  ${optionsHighlight}
 </svg>
 `.trim();
 
