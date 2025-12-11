@@ -1563,38 +1563,42 @@ export function findShortestPath<S>(options: TraversalOptions<S>): TraversalStat
 	return undefined;
 }
 
-export function countPaths<S>(
+export function getAllPaths<S>(
 	options: TraversalOptions<S>,
-	memos: Map<string, number> = new Map<string, number>(),
-	visited: Set<string> = new Set<string>()
+	memos: Map<string, string[][]> = new Map<string, string[][]>(),
+	visited: Array<string> = new Array<string>()
 ) {
 	// how should we identify the current node?
 	const keyOf = (options.visitedKey ? options.visitedKey : (s: S) => JSON.stringify(s));
 	const key = keyOf(options.state);
 
-	// is this the goal?
-	if (options.goal(options.state)) return 1;
-
-	// i.e., do we already know the answer for this node?
-	if (memos.has(key)) return memos.get(key)!;
-
 	// is there a cycle?
-	if (visited.has(key)) {
-		return 0;
+	if (visited.includes(key)) {
+		return [];
 	}
 
+	const pathKey = [...visited, key].join(',');
+
+	// i.e., do we already know the answer for this node?
+	if (memos.has(pathKey)) return memos.get(pathKey)!;
+
+	// is this the goal?
+	if (options.goal(options.state)) return [[...visited, key]];
+
 	// traverse
-	let count = 0;
+	let paths: string[][] = [];
 	const edges = options.edges(options.state);
 	for (const edge of edges) {
-		count += countPaths(
+		for (const path of getAllPaths(
 			{ ...options, state: edge },
 			memos,
-			new Set([key, ...visited]), // not the most efficient. but ok enough.
-		);
+			[...visited, key],
+		)) {
+			paths.push(path);
+		};
 	}
 
 	// final result is just a count.
-	memos.set(key, count);
-	return count;
+	memos.set(pathKey, paths);
+	return paths;
 }
