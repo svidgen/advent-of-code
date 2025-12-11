@@ -1,49 +1,17 @@
-import { lines, AutoPriorityQueue, sum, solveLinearSystem } from '../common/index.js';
-
-type BfsState<S> = { state: S, steps: number[], priority: number };
-
-type BfsOptions<S> = {
-	state: S;
-	visitedKey?: (state: S) => string;
-	hardFail?: (state: S) => boolean;
-	goal: (state: S) => boolean;
-	options: ((state: S) => S)[];
-}
-
-function bfs<S>(bfsOptions: BfsOptions<S>): BfsState<S> | undefined {
-	const keyof = (bfsOptions.visitedKey ? bfsOptions.visitedKey : s => JSON.stringify(s));
-	const hardFail = (bfsOptions.hardFail ? bfsOptions.hardFail : () => false);
-	const visited = new Set<string>();
-	const q = new AutoPriorityQueue<BfsState<S>>();
-
-	q.enqueue({ state: bfsOptions.state, steps: [], priority: 0 });
-	while (!q.isEmpty) {
-		const s = q.dequeue()!;
-		const k = keyof(s.state);
-
-		if (bfsOptions.goal(s.state)) return s;
-		if (visited.has(k)) continue;
-		if (hardFail(s.state)) continue;
-		visited.add(k);
-		
-		for (let i = 0; i < bfsOptions.options.length; i++) {
-			const newState = bfsOptions.options[i](s.state);
-			q.enqueue({
-				state: newState,
-				steps: [...s.steps, i],
-				priority: s.priority + 1
-			});
-		}
-	}
-
-	return undefined;
-}
+import {
+	lines,
+	sum,
+	bestPositiveIntSolution,
+	Equation,
+	solveLinearSystem,
+	findShortestPath
+} from '../common/index.js';
 
 class Machine {
 	public lights: boolean[] = [];
 	public target: boolean[] = [];
 	public buttons: Button[] = [];
-	public joltages: number[] = [];
+	public joltageTargets: number[] = [];
 
 	addButton(button: Button) {
 		this.buttons.push(button);
@@ -57,7 +25,7 @@ class Machine {
 		machine.buttons = line.match(/\([\d,]+\)/g)?.map(s => 
 			new Button(s.substring(1, s.length - 1).split(',').map(v => parseInt(v)))
 		)!;
-		machine.joltages = line.match(/\{(.+)\}/)?.[1].split(',').map(v => parseInt(v))!;
+		machine.joltageTargets = line.match(/\{(.+)\}/)?.[1].split(',').map(v => parseInt(v))!;
 		return machine;
 	}
 
@@ -68,17 +36,36 @@ class Machine {
 	}
 
 	solveLights() {
-		return bfs<boolean[]>({
+		return findShortestPath<boolean[]>({
 			state: [...this.lights],
 			goal: lights => lights.every((v, i) => v === this.target[i]),
-			options: this.buttons.map(b => (state: boolean[]) => b.toggleLights(state)),
+			edges: (state: boolean[]) => this.buttons.map(b => b.toggleLights(state)),
 		})
 	}
 
 	solveJoltages() {
-		return solveLinearSystem([
-			// ...
-		])
+		// creating a list of equations that we can do linear system stuff to.
+		// the right hand value is just the target joltage. each "x" column is the amount
+		// each button (by index) contributes to the target joltage. each button
+		// contributes exactly 0 or 1 in our case. so, we just need to put a 1
+		// in the column for each button that contributes to a particular joltage.
+		const equations = this.joltageTargets.map((target, t_i) => {
+			const eq: Equation = { y: target, x: Array(this.buttons.length).fill(0) };
+			for (let b_i = 0; b_i < this.buttons.length; b_i++) {
+				const wires = this.buttons[b_i].wires;
+				if (wires.includes(t_i)) eq.x[b_i] = 1;
+			}
+			return eq;
+		});
+
+		// console.log(equations, positiveIntSolutions(equations));
+
+		// return equations;
+
+		// and then we just pick best positive integer solution.
+		const result = sum(bestPositiveIntSolution(equations)!);
+		console.log(`solved one ... ${result}`);
+		return result;
 	}
 }
 
@@ -100,8 +87,27 @@ function part1() {
 }
 
 function part2() {
-	return '...'
+	// console.dir(
+	// 	machines
+	// 		.map(m => ({
+	// 			...m,
+	// 			diff: m.joltageTargets.length - m.buttons.length
+	// 		}))
+	// 		.filter(m => m.diff === -3)
+	// 		.sort((a, b) => a.diff - b.diff),
+	// 	{ depth: null }
+	// );
+	const solutions = machines.map(m => m.solveJoltages());
+	// console.dir(solutions, { depth: null });
+	return sum(solutions);
 }
+
+const eq: Equation[] = [
+	{ x: [0, 0, 1], y: 5},
+	{ x: [0, 1, 0], y: 3},
+];
+// console.log(bestPositiveIntSolution(eq));
+// console.log(bestPositiveIntSolution([eq], eq => sum(eq)));
 
 console.log('part 1', part1());
 console.log('part 2', part2());

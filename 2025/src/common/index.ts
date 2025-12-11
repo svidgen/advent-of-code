@@ -768,74 +768,74 @@ export class StepTracer<
 }
 
 export class ProgrammableCursor<T> {
-    public location: Coord;
+	public location: Coord;
 
-    constructor(
-        public grid: Grid<T>,
-        public start: Coord,
-        public program: {
-            /**
-             * Called after the step is started, but before the ProgrammableCursor
-             * attemps to update the grid with its new location.
-             * 
-             * This allows the callback to manipulate the grid or cursor ahead of
-             * the completion of the step. Useful for things like:
-             * 
-             * 1. Moving the cursor elsewhere
-             * 1. Moving the cursor back to its `from` location. E.g., if it hits a wall.
-             * 1. Pushing items ahead of it.
-             * 
-             * Direction is provided as a convenience and can be provided to a grid's
-             * `searchBeaconAt()` method directly to "look" in the direction the cursor
-             * is headed.
-             * 
-             * This is also where the grid should be updated if drawing/keeping the grid
-             * up to date is desired.
-             * 
-             * @param step 
-             * @returns 
-             */
-            onStep?: (step: {
-                direction: Direction[];
-                from: Coord;
-                into: Coord;
-            }) => void
+	constructor(
+		public grid: Grid<T>,
+		public start: Coord,
+		public program: {
+			/**
+			 * Called after the step is started, but before the ProgrammableCursor
+			 * attemps to update the grid with its new location.
+			 * 
+			 * This allows the callback to manipulate the grid or cursor ahead of
+			 * the completion of the step. Useful for things like:
+			 * 
+			 * 1. Moving the cursor elsewhere
+			 * 1. Moving the cursor back to its `from` location. E.g., if it hits a wall.
+			 * 1. Pushing items ahead of it.
+			 * 
+			 * Direction is provided as a convenience and can be provided to a grid's
+			 * `searchBeaconAt()` method directly to "look" in the direction the cursor
+			 * is headed.
+			 * 
+			 * This is also where the grid should be updated if drawing/keeping the grid
+			 * up to date is desired.
+			 * 
+			 * @param step 
+			 * @returns 
+			 */
+			onStep?: (step: {
+				direction: Direction[];
+				from: Coord;
+				into: Coord;
+			}) => void
 
-            /**
-             * The list of steps the cursor will take when run.
-             */
-            steps: Direction[][],
-        }
-    ) {
-        this.location = this.start;
-    }
+			/**
+			 * The list of steps the cursor will take when run.
+			 */
+			steps: Direction[][],
+		}
+	) {
+		this.location = this.start;
+	}
 
-    step(direction: Direction[]) {
-        const from = this.location;
-        this.location = computeStep(from, direction);
-        this.program.onStep?.({
-            direction,
-            from,
-            into: this.location
-        });
-    }
+	step(direction: Direction[]) {
+		const from = this.location;
+		this.location = computeStep(from, direction);
+		this.program.onStep?.({
+			direction,
+			from,
+			into: this.location
+		});
+	}
 
-    run() {
-        for (const direction of this.program.steps) {
-            this.step(direction);
-            // console.log('\n', direction, '\n');
-            // console.log(this.grid.toString());
-            // console.log();
-        }
-    }
+	run() {
+		for (const direction of this.program.steps) {
+			this.step(direction);
+			// console.log('\n', direction, '\n');
+			// console.log(this.grid.toString());
+			// console.log();
+		}
+	}
 }
 
 export class Region<T> {
-    public coords: Coord[] = [];
+	public coords: Coord[] = [];
 
-    constructor(public grid: Grid<T>, public map: Grid<Region<T> | null>) { }
+	constructor(public grid: Grid<T>, public map: Grid<Region<T> | null>) { }
 
-    static findAll<T>(
+	static findAll<T>(
 		grid: Grid<T>,
 		{
 			withOrdinals = false,
@@ -847,20 +847,20 @@ export class Region<T> {
 			fillInto?: (from: T | undefined, into: T | undefined) => boolean
 		} = {}
 	): Set<Region<T>> {
-        // const map = Grid.fromDimensions<Region<T> | null>(grid.width, grid.height, () => null);
+		// const map = Grid.fromDimensions<Region<T> | null>(grid.width, grid.height, () => null);
 		const map = Grid.fromDimensions<Region<T> | null>(0, 0, () => null);
-        const regions = new Set<Region<T>>();
-        for (const coord of grid.coords) {
-            if (map.get(coord)) continue;
+		const regions = new Set<Region<T>>();
+		for (const coord of grid.coords) {
+			if (map.get(coord)) continue;
 			if (ignore(coord, grid.get(coord))) continue;
-            const region = new Region(grid, map);
-            region.flood(coord, withOrdinals, ignore, fillInto);
-            regions.add(region);
-        }
-        return regions;
-    }
+			const region = new Region(grid, map);
+			region.flood(coord, withOrdinals, ignore, fillInto);
+			regions.add(region);
+		}
+		return regions;
+	}
 
-    flood(
+	flood(
 		coord: Coord,
 		withOrdinals: boolean,
 		ignore: (coord: Coord, value: T | undefined) => boolean,
@@ -882,120 +882,120 @@ export class Region<T> {
 				if (!ignore(n, nv) && fillInto(cv, nv)) q.enqueue(n);
 			}
 		}
-    }
-    
-    private add(coord: Coord) {
-        this.coords.push(coord);
-    }
+	}
+	
+	private add(coord: Coord) {
+		this.coords.push(coord);
+	}
 
 	get value() {
 		return this.coords.length > 0 ? this.grid.get(this.coords[0]) : undefined;
 	}
 
-    get area() {
-        return this.coords.length;
-    }
+	get area() {
+		return this.coords.length;
+	}
 
-    get perimeter() {
-        let perimeter = 0;
+	get perimeter() {
+		let perimeter = 0;
 
-        // each coord has 4 sides and so contributes 4 perimeter *minus* the number of
-        // "inside" edges. this can be determined by the number of neighbors it has.
-        for (const coord of this.coords) {
-            let contribution = 4;
-            for (const n of this.map.neighbors(coord, { withOrdinals: false })) {
-                if (this.map.get(n) === this) {
-                    contribution--;
-                }
-            }
-            perimeter += contribution;
-        }
+		// each coord has 4 sides and so contributes 4 perimeter *minus* the number of
+		// "inside" edges. this can be determined by the number of neighbors it has.
+		for (const coord of this.coords) {
+			let contribution = 4;
+			for (const n of this.map.neighbors(coord, { withOrdinals: false })) {
+				if (this.map.get(n) === this) {
+					contribution--;
+				}
+			}
+			perimeter += contribution;
+		}
 
-        return perimeter;
-    }
+		return perimeter;
+	}
 
-    /**
-     * Count of "sides".
-     * 
-     * A "side" is a contiguous/unbent section of the perimeter.
-     * 
-     * Each cell contributes to the side count based on how many corners it forms.
-     * I.e., if you start following a wall, every time you need to turn, a new side
-     * is formed.
-     * 
-     * ```
-     * ..........
-     * ..O.......
-     * ..OOO.....
-     * .OOOOO....
-     * .OOO.O....
-     * ...O......
-     * ```
-     */
-    get sides() {
-        return this.corners;
-    }
+	/**
+	 * Count of "sides".
+	 * 
+	 * A "side" is a contiguous/unbent section of the perimeter.
+	 * 
+	 * Each cell contributes to the side count based on how many corners it forms.
+	 * I.e., if you start following a wall, every time you need to turn, a new side
+	 * is formed.
+	 * 
+	 * ```
+	 * ..........
+	 * ..O.......
+	 * ..OOO.....
+	 * .OOOOO....
+	 * .OOO.O....
+	 * ...O......
+	 * ```
+	 */
+	get sides() {
+		return this.corners;
+	}
 
-    /**
-     * Count of corners.
-     * 
-     * A cell forms a corner at each "open" ordinal where the corresponding/adjacent
-     * cardinals are the same -- either both "closed" or both "open".
-     * 
-     * ```
-     * !ordinal && cardinalA === cardinalB
-     * ```
-     * 
-     * It also forms a corner if the ordinal is "closed" and the corresponding/adjacent
-     * cardinals are "open". See the "special corner" cases below.
-     * 
-     * ```
-     * ..OOOO....
-     * ..O..O.... // special corner case here!
-     * ..OOO..... // same special case here!
-     * .OOOOO....
-     * .OOO.O....
-     * ...O......
-     * ```
-     * 
-     * So that's:
-     * 
-     * ```
-     * ordinal && !cardinalA && !cardinalB
-     * ```
-     * 
-     * When these rules are combined:
-     * 
-     * ```
-     * (!ordinal && !cardinal) || (ordinal && !cardinals)
-     * ```
-     */
-    get corners() {
-        let corners = 0;
+	/**
+	 * Count of corners.
+	 * 
+	 * A cell forms a corner at each "open" ordinal where the corresponding/adjacent
+	 * cardinals are the same -- either both "closed" or both "open".
+	 * 
+	 * ```
+	 * !ordinal && cardinalA === cardinalB
+	 * ```
+	 * 
+	 * It also forms a corner if the ordinal is "closed" and the corresponding/adjacent
+	 * cardinals are "open". See the "special corner" cases below.
+	 * 
+	 * ```
+	 * ..OOOO....
+	 * ..O..O.... // special corner case here!
+	 * ..OOO..... // same special case here!
+	 * .OOOOO....
+	 * .OOO.O....
+	 * ...O......
+	 * ```
+	 * 
+	 * So that's:
+	 * 
+	 * ```
+	 * ordinal && !cardinalA && !cardinalB
+	 * ```
+	 * 
+	 * When these rules are combined:
+	 * 
+	 * ```
+	 * (!ordinal && !cardinal) || (ordinal && !cardinals)
+	 * ```
+	 */
+	get corners() {
+		let corners = 0;
 
-        for (const coord of this.coords) {
-            const [NW, N, NE, W, E, SW, S, SE] = [
-                ...this.map.neighbors(coord, { offGrid: true })
-            ].map(c => this.map.get(c) === this);
+		for (const coord of this.coords) {
+			const [NW, N, NE, W, E, SW, S, SE] = [
+				...this.map.neighbors(coord, { offGrid: true })
+			].map(c => this.map.get(c) === this);
 
-            const NECorner = (NE && !N && !E) || (!NE && (N === E)) ? 1 : 0;
-            const NWCorner = (NW && !N && !W) || (!NW && (N === W)) ? 1 : 0;
-            const SECorner = (SE && !S && !E) || (!SE && (S === E)) ? 1 : 0;
-            const SWCorner = (SW && !S && !W) || (!SW && (S === W)) ? 1 : 0;
+			const NECorner = (NE && !N && !E) || (!NE && (N === E)) ? 1 : 0;
+			const NWCorner = (NW && !N && !W) || (!NW && (N === W)) ? 1 : 0;
+			const SECorner = (SE && !S && !E) || (!SE && (S === E)) ? 1 : 0;
+			const SWCorner = (SW && !S && !W) || (!SW && (S === W)) ? 1 : 0;
 
-            corners += NECorner + NWCorner + SECorner + SWCorner;
-        }
+			corners += NECorner + NWCorner + SECorner + SWCorner;
+		}
 
-        return corners;
-    }
+		return corners;
+	}
 
-    get visual() {
-        const v = Grid.fromDimensions<string>(this.map.width, this.map.height, () => '.');
-        for (const c of this.coords) {
-            v.set(c, 'O');
-        }
-        return v;
-    }
+	get visual() {
+		const v = Grid.fromDimensions<string>(this.map.width, this.map.height, () => '.');
+		for (const c of this.coords) {
+			v.set(c, 'O');
+		}
+		return v;
+	}
 }
 
 class QueueNode<T> {
@@ -1122,8 +1122,8 @@ export class AutoPriorityQueue<T extends Prioritized> extends Queue<T> {
 }
 
 export type Equation = {
-    y: number,
-    x: number[]
+	y: number,
+	x: number[]
 };
 
 export type Solution = number[];
@@ -1132,35 +1132,57 @@ export type Solution = number[];
  * Solves a system of linear equations.
  */
 export function solveLinearSystem(equations: Equation[]): Solution | "multiple" | "unsolvable" {
-	if (!equations.every(e => e.x.length === equations.length)) return 'unsolvable';
-	
+	if (equations.length === 0 || equations[0].x.length === 0) return 'unsolvable';
+	if (equations.some(eq => Number.isNaN(eq.y) || !Number.isFinite(eq.y))) return 'unsolvable';
+	if (equations[0].x.length !== equations.length) return 'multiple';
+
 	const eq = equations.map(e => ({
 		y: e.y,
 		x: [...e.x]
 	}));
 
-    for (let i = 0; i < eq.length; i++) {
-        // set the coefficient at the diagonal to 1
-        const cx = eq[i].x[i];
-        
-        for (let xi = 0; xi < eq.length; xi++) {
-            eq[i].x[xi] = eq[i].x[xi] / cx;
-        }
-        eq[i].y = eq[i].y / cx;
+	for (let i = 0; i < eq.length; i++) {
+		// set the coefficient at the diagonal to 1
+		let cx = eq[i].x[i];
+		
+		// if cx is 0, we want to try to find an row to add to this one
+		// so we can use it as our `1` value-row. we'll look only at rows
+		// below this one so we don't populate already zerod out columns.
+		if (cx === 0) {
+			let foundOne = false;
+			for (let ri = cx + 1; ri < eq.length; ri++) {
+				if (eq[ri].x[i] > 0) {
+					foundOne = true;
+					for (let xi = 0; xi < eq.length; xi++) {
+						eq[i].x[xi] += eq[ri].x[xi];
+					}
+					eq[i].y += eq[ri].y;
+					break;
+				}
+			}
+			if (!foundOne) return 'multiple';
+			cx = eq[i].x[i];
+		}
 
-        // propagate to other rows, setting all other coefficients at `i` to 0
-        for (let j = 0; j < eq.length; j++) {
-            if (i === j) continue;
-            const coeff = eq[j].x[i];
-            
-            for (let xi = 0; xi < eq.length; xi++) {
-                eq[j].x[xi] = eq[j].x[xi] - eq[i].x[xi] * coeff;
-            }
-            eq[j].y = eq[j].y - eq[i].y * coeff;
-        }
-    }
+		// now, divide everything in the row by the value in the column value to make it 1.
+		for (let xi = 0; xi < eq.length; xi++) {
+			eq[i].x[xi] = eq[i].x[xi] / cx;
+		}
+		eq[i].y = eq[i].y / cx;
 
-	const floatSolution = eq.map(e => e.y);;
+		// propagate to other rows, setting all other coefficients at `i` to 0
+		for (let j = 0; j < eq.length; j++) {
+			if (i === j) continue;
+			const coeff = eq[j].x[i];
+			
+			for (let xi = 0; xi < eq.length; xi++) {
+				eq[j].x[xi] = eq[j].x[xi] - eq[i].x[xi] * coeff;
+			}
+			eq[j].y = eq[j].y - eq[i].y * coeff;
+		}
+	}
+
+	const floatSolution = eq.map(e => e.y);
 	if (floatSolution.some(s => Number.isNaN(s))) return 'multiple';
 
 	const intSolution = floatSolution.map(c => Math.round(c));
@@ -1168,65 +1190,86 @@ export function solveLinearSystem(equations: Equation[]): Solution | "multiple" 
 }
 
 export function isSolutionToLinearSystem(equations: Equation[], cx: number[]): boolean {
-    for (const eq of equations) {
-        if (sum(eq.x.map((x, i) => x * cx[i])) !== eq.y) return false;
-    }
-    return true;
+	for (const eq of equations) {
+		if (sum(eq.x.map((x, i) => x * cx[i])) !== eq.y) return false;
+	}
+	return true;
 }
 
 export function partialLinearSystem(equations: Equation[], c0: number): Equation[] {
-    return equations.map(eq => {
-        const y = eq.y - eq.x[0] * c0;
-        const x = eq.x.slice(1);
-        return { x, y };
-    }).slice(1);
+	return equations.map(eq => {
+		const [x0, ...x] = eq.x;
+		const y = eq.y - (x0 * c0);
+		return { x, y };
+	});
 }
 
-export function positiveIntSolutions(equations: Equation[], limit: number = 101): Solution[] {
-    const solution = solveLinearSystem(equations);
+export function bestPositiveIntSolution(equations: Equation[], budget: number = Number.MAX_SAFE_INTEGER): Solution | undefined {
+	const immediateSolution = solveLinearSystem(equations);
 
-    // if there is no solution, we can stop looking!
-    if (solution === 'unsolvable') return [];
-    
-    // if we have a single solution, we only care about it if the
-    // coefficients are all positive.
-    if (solution !== 'multiple') {
-        if (solution.every(c => c >= 0) && solution.every(c => Math.floor(c) === c)) {
-            return [solution];
-        } else {
-            return [];
-        }
-    }
+	// console.log({ immediateSolution });
 
-    // otherwise, we have multiple possible solutions. so, we need to enumerate them.
-    let solutions: Solution[] = [];
-    let c = 0;
-    let misses = 0;
-    while (misses < limit) {
-        const partial = partialLinearSystem(equations, c);
-        const subSolutions = positiveIntSolutions(partial);
-        if (subSolutions.length === 0) {
-            misses++;
-        } else {
-            misses = 0;
-            for (const sub of subSolutions) {
-                solutions.push([c, ...sub])
-            }
-        }
-        c++;
-    }
+	// if there is no solution, we can stop looking!
+	if (immediateSolution === 'unsolvable') return;
+	
+	// if we have a single solution, we only care about it if the
+	// coefficients are all positive integers.
+	if (immediateSolution !== 'multiple') {
+		if (immediateSolution.every(c => c >= 0 && Math.floor(c) === c)) {
+			return immediateSolution;
+		} else {
+			return;
+		}
+	}
 
-    return solutions;
+	let solution: Solution | undefined = undefined;
+	let score = Math.min(budget, Math.max(...equations.map(eq => eq.y)) * 2);
+
+	if (equations[0].x.length < equations.length) {
+		for (let i = 0; i < equations.length; i++) {
+			const permutation = equations.toSpliced(i, 1);
+			const candidate = bestPositiveIntSolution(permutation, score);
+			const candidateScore = candidate ? sum(candidate) : Number.MAX_SAFE_INTEGER;
+			if (candidate && isSolutionToLinearSystem(equations, candidate) && candidateScore < score) {
+				// console.dir({ exit: 'a', equations, candidate, candidateScore, score }, { depth: null });
+				score = candidateScore;
+				solution = candidate;
+			}
+		}
+	}
+
+	if (solution) return solution;
+
+	for (let c0 = 0; c0 <= score; c0++) {
+		const partial = partialLinearSystem(equations, c0);
+		if (partial.some(eq => eq.y < 0)) continue;
+		const candidateSubSolution = bestPositiveIntSolution(partial, score - c0);
+		if (candidateSubSolution) {
+			const candidate = [c0, ...candidateSubSolution];
+			const candidateScore = sum(candidate);
+			if (candidateScore < score && isSolutionToLinearSystem(equations, candidate)) {
+				// console.dir({ exit: 'b', equations, candidate, candidateScore, score }, { depth: null });
+				solution = candidate;
+				score = candidateScore;
+			}
+		}
+	}
+
+	// if (solution === undefined) {
+	// 	console.dir({ NONE: true, equations, score, immediateSolution }, { depth: null });
+	// }
+
+	return solution;
 }
 
-export function bestPositiveIntSolution(
-	equations: Equation[],
-	score: (eq: Solution) => number
-): Solution | undefined {
-    const solutions = positiveIntSolutions(equations);
-    solutions.sort((a, b) => score(a) - score(b));
-    return solutions.shift();
-}
+// export function bestPositiveIntSolution(
+// 	equations: Equation[],
+// 	score: (eq: Solution) => number
+// ): Solution | undefined {
+// 	const solutions = positiveIntSolutions(equations);
+// 	solutions.sort((a, b) => score(a) - score(b));
+// 	return solutions.shift();
+// }
 
 export class InclusiveRange {
 	constructor(
@@ -1478,4 +1521,80 @@ export class Space {
 
 		return (typeof maxEdges === 'undefined' ? visitedEdges : clusters) as any;
 	}
+}
+
+export type TraversalState<S> = { state: S, steps: number[], priority: number };
+
+export type TraversalOptions<S> = {
+	state: S;
+	visitedKey?: (state: S) => string;
+	hardFail?: (state: S) => boolean;
+	goal: (state: S) => boolean;
+	edges: (state: S) => S[];
+}
+
+export function findShortestPath<S>(options: TraversalOptions<S>): TraversalState<S> | undefined {
+	const keyof = (options.visitedKey ? options.visitedKey : s => JSON.stringify(s));
+	const hardFail = (options.hardFail ? options.hardFail : () => false);
+	const visited = new Set<string>();
+	const q = new AutoPriorityQueue<TraversalState<S>>();
+
+	q.enqueue({ state: options.state, steps: [], priority: 0 });
+	while (!q.isEmpty) {
+		const s = q.dequeue()!;
+		const k = keyof(s.state);
+
+		if (options.goal(s.state)) return s;
+		if (visited.has(k)) continue;
+		if (hardFail(s.state)) continue;
+		visited.add(k);
+		
+		const edges = options.edges(s.state);
+		for (let i = 0; i < edges.length; i++) {
+			const newState = edges[i];
+			q.enqueue({
+				state: newState,
+				steps: [...s.steps, i],
+				priority: s.priority + 1
+			});
+		}
+	}
+
+	return undefined;
+}
+
+export function countPaths<S>(
+	options: TraversalOptions<S>,
+	memos: Map<string, number> = new Map<string, number>(),
+	visited: Set<string> = new Set<string>()
+) {
+	// how should we identify the current node?
+	const keyOf = (options.visitedKey ? options.visitedKey : (s: S) => JSON.stringify(s));
+	const key = keyOf(options.state);
+
+	// is this the goal?
+	if (options.goal(options.state)) return 1;
+
+	// i.e., do we already know the answer for this node?
+	if (memos.has(key)) return memos.get(key)!;
+
+	// is there a cycle?
+	if (visited.has(key)) {
+		return 0;
+	}
+
+	// traverse
+	let count = 0;
+	const edges = options.edges(options.state);
+	for (const edge of edges) {
+		count += countPaths(
+			{ ...options, state: edge },
+			memos,
+			new Set([key, ...visited]), // not the most efficient. but ok enough.
+		);
+	}
+
+	// final result is just a count.
+	memos.set(key, count);
+	return count;
 }
