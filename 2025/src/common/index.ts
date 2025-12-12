@@ -1564,52 +1564,12 @@ export function findShortestPath<S>(options: TraversalOptions<S>): TraversalStat
 	return undefined;
 }
 
-export type DFSOptions<S> = {
-	state: S;
-	keyOf?: (state: S) => string;
-	goal: (state: S) => boolean;
-	edges: (state: S) => S[];
-}
-
-export function getAllPaths<S>(
-	options: DFSOptions<S>,
-	paths: PrefixTree<boolean> = new PrefixTree<boolean>({}),
-) {
-	// how should we identify the current node?
-	const keyOf = (options.keyOf ? options.keyOf : (s: S) => JSON.stringify(s));
-	const key = keyOf(options.state);
-
-	// is there a cycle?
-	if (paths.fullKey.includes(key)) {
-		return paths;
-	}
-
-	// do we already know the answer for this node?
-	const existing = paths.subtree([key]);
-	if (existing) return paths;
-
-	// is this the goal?
-	if (options.goal(options.state)) {
-		paths.set([key], true);
-		return paths;
-	} else {
-		paths.set([key], false);
-	}
-
-	// traverse
-	const edges = options.edges(options.state);
-	for (const edge of edges) {
-		getAllPaths({ ...options, state: edge }, paths.subtree([key])!)
-	}
-
-	return paths;
-}
-
 export type GeneralDFS<S, R> = {
 	state: S;
 	visit: (path: string[], state: S, childResults: R[]) => R;
 	childrenOf: (state: S) => S[];
-	keyOf?: (state: S) => string;
+	pathStringOf?: (state: S) => string;
+	memoKeyOf?: (state: S, path: string[]) => string;
 };
 
 export function dfs<S, R>(
@@ -1617,14 +1577,19 @@ export function dfs<S, R>(
 	memos: Map<string, R> = new Map<string, R>(),
 	visited: string[] = [],
 ): R {
-	const keyOf = (options.keyOf ? options.keyOf : (s: S) => JSON.stringify(s));
-	const key = keyOf(options.state);
+	const pathStringOf = (options.pathStringOf ? options.pathStringOf :
+		(s: S) => typeof s === 'string' ? s : JSON.stringify(s)
+	);
+	const memoKeyOf = options.memoKeyOf ? options.memoKeyOf : (s: S) => JSON.stringify(s);
+
+	const pathString = pathStringOf(options.state);
+	const key = memoKeyOf(options.state, visited);
 
 	if (memos.has(key)) return memos.get(key)!;
-	visited.push(key);
+	visited.push(pathString);
 
 	const childResults = options.childrenOf(options.state)
-		.filter(s => !visited.includes(keyOf(s)))
+		.filter(s => !visited.includes(pathStringOf(s)))
 		.map(state => dfs({ ...options, state }, memos, visited));
 	const result = options.visit(visited, options.state, childResults);
 
