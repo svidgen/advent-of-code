@@ -20,9 +20,10 @@ export const blocks = raw.trim().split(/\n\n/).map(raw => ({
 	lines: raw.trim().split(/\n/)
 }));
 
-export function sum(values: number[]): number {
-	let total = 0;
-	for (const v of values) total+= v;
+export function sum<T extends number[] | bigint[]>(values: T): T[number] {
+	let total = (typeof values[0] === 'bigint' ? 0n : 0) as T[number];
+	// @ts-ignore
+	for (const v of values) total = total + v;
 	return total;
 }
 
@@ -1563,42 +1564,173 @@ export function findShortestPath<S>(options: TraversalOptions<S>): TraversalStat
 	return undefined;
 }
 
+export type DFSOptions<S> = {
+	state: S;
+	keyOf?: (state: S) => string;
+	goal: (state: S) => boolean;
+	edges: (state: S) => S[];
+}
+
 export function getAllPaths<S>(
-	options: TraversalOptions<S>,
-	memos: Map<string, string[][]> = new Map<string, string[][]>(),
-	visited: Array<string> = new Array<string>()
+	options: DFSOptions<S>,
+	paths: PrefixTree<boolean> = new PrefixTree<boolean>({}),
 ) {
 	// how should we identify the current node?
-	const keyOf = (options.visitedKey ? options.visitedKey : (s: S) => JSON.stringify(s));
+	const keyOf = (options.keyOf ? options.keyOf : (s: S) => JSON.stringify(s));
 	const key = keyOf(options.state);
 
 	// is there a cycle?
-	if (visited.includes(key)) {
-		return [];
+	if (paths.fullKey.includes(key)) {
+		return paths;
 	}
 
-	const pathKey = [...visited, key].join(',');
-
-	// i.e., do we already know the answer for this node?
-	if (memos.has(pathKey)) return memos.get(pathKey)!;
+	// do we already know the answer for this node?
+	const existing = paths.subtree([key]);
+	if (existing) return paths;
 
 	// is this the goal?
-	if (options.goal(options.state)) return [[...visited, key]];
-
-	// traverse
-	let paths: string[][] = [];
-	const edges = options.edges(options.state);
-	for (const edge of edges) {
-		for (const path of getAllPaths(
-			{ ...options, state: edge },
-			memos,
-			[...visited, key],
-		)) {
-			paths.push(path);
-		};
+	if (options.goal(options.state)) {
+		paths.set([key], true);
+		return paths;
+	} else {
+		paths.set([key], false);
 	}
 
-	// final result is just a count.
-	memos.set(pathKey, paths);
+	// traverse
+	const edges = options.edges(options.state);
+	for (const edge of edges) {
+		getAllPaths({ ...options, state: edge }, paths.subtree([key])!)
+	}
+
 	return paths;
+}
+
+export type GeneralDFS<S, R> = {
+	state: S;
+	visit: (path: string[], state: S, childResults: R[]) => R;
+	childrenOf: (state: S) => S[];
+	keyOf?: (state: S) => string;
+};
+
+export function dfs<S, R>(
+	options: GeneralDFS<S, R>,
+	memos: Map<string, R> = new Map<string, R>(),
+	visited: string[] = [],
+): R {
+	const keyOf = (options.keyOf ? options.keyOf : (s: S) => JSON.stringify(s));
+	const key = keyOf(options.state);
+
+	if (memos.has(key)) return memos.get(key)!;
+	visited.push(key);
+
+	const childResults = options.childrenOf(options.state)
+		.filter(s => !visited.includes(keyOf(s)))
+		.map(state => dfs({ ...options, state }, memos, visited));
+	const result = options.visit(visited, options.state, childResults);
+
+	memos.set(key, result);
+	visited.pop();
+	return result;
+}
+
+class PrefixTree<T> {
+	/**
+	 * Linkage back to the parent node.
+	 */
+	parent: PrefixTree<T> | undefined;
+
+	/**
+	 * Key associated with this node.
+	 * Root node should be `undefined`.
+	 */
+	key: string | undefined;
+
+	/**
+	 * ```
+	 * {
+	 *   "A" => PrefixTree({ key: "A", ... }),
+	 *   "B" => PrefixTree({ key: "B", ... }),
+	 *   ... etc. .. 
+	 * }
+	 * ```
+	 */
+	children = new Map<string, PrefixTree<T>>;
+
+	value: T | undefined;
+
+	constructor(options: { key?: string, parent?: PrefixTree<T>, value?: T }) {
+		this.parent = options.parent;
+		this.key = options.key;
+		this.value = options.value;
+	}
+
+	/**
+	 * Adds a single key from a list of the key parts.
+	 * 
+	 * The first part of the key is taken to be a child of `this` node, which
+	 * allows for consistent insertion semantics at the root node, which has an
+	 * `undefined` key value by definition.
+	 * @param key 
+	 * @returns 
+	 */
+	set(key: string[], value?: T) {
+		if (key.length === 0) return;
+		const [firstPart, ...rest] = key;
+		if (!this.children.has(firstPart)) {
+			this.children.set(firstPart, new PrefixTree({ parent: this, key: firstPart }));
+		}
+		if (rest.length > 0) {
+			this.children.get(firstPart)!.set(rest, value);
+		} else {
+			this.children.get(firstPart)!.value = value;
+		}
+	}
+
+	/**
+	 * Gets the subtree from a list of key parts.
+	 * 
+	 * The first part of the key is taken to be a child of `this` node.
+	 * 
+	 * @param key 
+	 * @returns 
+	 */
+	subtree(key: string[]): PrefixTree<T> | undefined {
+		if (key.length === 0) return this;
+		const [first, ...rest] = key;
+		return this.children.get(first)?.subtree(rest);
+	}
+
+	fullKeyIncludesSegment(segment: string) {
+		if (this.key === segment) return true;
+		if (this.parent?.fullKeyIncludesSegment(segment)) return true;
+		return false;
+	}
+
+	get fullKey() {
+		const parts: string[] = this.key ? [this.key] : [];
+		let parent = this.parent;
+		while (parent) {
+			if (parent.key) parts.push(parent.key);
+			parent = parent.parent;
+		}
+		return parts.reverse();
+	}
+
+	* items(filter?: (node: PrefixTree<T>) => boolean): Generator<PrefixTree<T>> {
+		if (!filter || filter(this)) yield this;
+		for (const child of this.children.values()) {
+			for (const item of child.items(filter)) {
+				yield item;
+			}
+		}
+	}
+
+	count(filter?: (node: PrefixTree<T>) => boolean): number {
+		let count = (!filter || filter(this)) ? 1 : 0;
+		for (const child of this.children.values()) {
+			count += child.count(filter);
+		}
+		return count;
+	}
+
 }

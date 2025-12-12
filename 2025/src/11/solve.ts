@@ -1,4 +1,4 @@
-import { lines, getAllPaths } from '../common/index.js';
+import { lines, getAllPaths, dfs, sum } from '../common/index.js';
 
 const graph = new Map<string, Set<string>>();
 
@@ -10,23 +10,60 @@ for (const line of lines) {
 	}
 }
 
+function countPaths(from: string, to: string, excluding?: string) {
+	return dfs({
+		state: from,
+		childrenOf(state) {
+			return Array.from(graph.get(state) ?? []);
+		},
+		visit(path, state, childResults): bigint {
+			return (
+				state === to &&
+				(!excluding || !path.includes(excluding!))
+			) ? 1n : 0n + BigInt(sum(childResults));
+		},
+	});
+}
+
 function part1() {
-	return getAllPaths({
-		state: 'you',
-		goal: s => s === 'out',
-		visitedKey: s => s,
-		edges: s => Array.from(graph.get(s) ?? [])
-	}).length;
+	// count of paths from `you` -> `out`
+	return countPaths('you', 'out');
 }
 
 function part2() {
-	return getAllPaths({
-		state: 'svr',
-		goal: s => s === 'out',
-		visitedKey: s => s,
-		edges: s => Array.from(graph.get(s) ?? [])
-	}).filter(path => path.includes('dac') && path.includes('fft')).length;
+	// count of paths from `svr` -> `out` that pass through both `dac` and `fft`.
+
+	// same as this:
+	const directToDAC = countPaths('svr', 'dac', 'fft');
+	const DACtoFFT = countPaths('dac', 'fft');
+	const FFTdirectToOUT = countPaths('fft', 'out', 'dac');
+	const dacFirst = directToDAC * DACtoFFT * FFTdirectToOUT;
+
+	const directToFFT = countPaths('svr', 'fft', 'dac');
+	const FFTtoDAC = countPaths('fft', 'dac');
+	const DACdirectToOut = countPaths('dac', 'out', 'fft');
+	const fftFirst = directToFFT * FFTtoDAC * DACdirectToOut;
+
+	return dacFirst + fftFirst;
+}
+
+function part2_1() {
+	// count of paths from `svr` -> `out` that pass through both `dac` and `fft`.
+	
+	// same as this:
+	const directToDAC = countPaths('svr', 'dac', 'fft');
+	const DACtoFFT = countPaths('dac', 'fft');
+	const FFTdirectToOUT = countPaths('fft', 'out', 'dac');
+	const dacFirst = directToDAC * DACtoFFT * FFTdirectToOUT;
+
+	const directToFFT = countPaths('svr', 'fft', 'dac');
+	const FFTtoDAC = countPaths('fft', 'dac');
+	const DACdirectToOut = countPaths('dac', 'out', 'fft');
+	const fftFirst = directToFFT * FFTtoDAC * DACdirectToOut;
+
+	return dacFirst + fftFirst;
 }
 
 console.log('part 1', part1());
 console.log('part 2', part2());
+console.log('part 2', part2_1());
