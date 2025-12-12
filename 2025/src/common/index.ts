@@ -20,6 +20,18 @@ export const blocks = raw.trim().split(/\n\n/).map(raw => ({
 	lines: raw.trim().split(/\n/)
 }));
 
+
+export function time(label: string, f: () => any) {
+	const start = performance.now();
+	const result = f();
+	const end = performance.now();
+	return {
+		label,
+		result,
+		time: end - start
+	};
+}
+
 export function sum<T extends number[] | bigint[]>(values: T): T[number] {
 	let total = (typeof values[0] === 'bigint' ? 0n : 0) as T[number];
 	// @ts-ignore

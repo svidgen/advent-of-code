@@ -1,4 +1,4 @@
-import { lines, dfs, sum } from '../common/index.js';
+import { lines, dfs, sum, time } from '../common/index.js';
 
 const graph = new Map<string, Set<string>>();
 
@@ -37,7 +37,7 @@ function part2() {
 	// of that state that indicates whether the path already passes through the
 	// intended nodes ... implemented for/in part2_b.
 
-	// this works too though. just as fast, if not faster.
+	// this works too though. almost identical performance.
 	const directToDAC = countPaths('svr', 'dac', 'fft');
 	const DACtoFFT = countPaths('dac', 'fft');
 	const FFTdirectToOUT = countPaths('fft', 'out', 'dac');
@@ -77,6 +77,19 @@ function part2_b() {
 	return countPathsB('svr', 'out', ['fft', 'dac']);
 }
 
-console.log('part 1', part1());
-console.log('part 2', part2());
-console.log('part 2_b', part2_b());
+console.table([
+	time('part 1', part1),
+	time('part 2', part2),
+	time('part 2_b', part2_b),
+]);
+
+/**
+ * E.g.,
+┌─────────┬────────────┬──────────────────┬────────────────────┐
+│ (index) │ label      │ result           │ time               │
+├─────────┼────────────┼──────────────────┼────────────────────┤
+│ 0       │ 'part 1'   │ 788n             │ 0.295416000000003  │
+│ 1       │ 'part 2'   │ 316291887968000n │ 2.9304580000000016 │
+│ 2       │ 'part 2_b' │ 316291887968000n │ 2.9711250000000007 │
+└─────────┴────────────┴──────────────────┴────────────────────┘
+ */
