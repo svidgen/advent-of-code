@@ -45,6 +45,16 @@ export function product(values: number[]): number {
 	return p;
 }
 
+export function unique<T>(values: T[], equals: (a: T, b: T) => boolean) {
+	const out: T[] = [];
+	for (const candidate of values) {
+		if (!out.some(existing => equals(existing, candidate))) {
+			out.push(candidate);
+		}
+	}
+	return out;
+}
+
 /**
  * Calculates `v mod m`, accounting for negative numbers (which JavaScript's)
  * `%` operator (the "remainder" operator) doesn't do.
@@ -292,6 +302,10 @@ export class Grid<T> {
 		return new Grid(data, _initialize);
 	}
 
+	get area() {
+		return this.width * this.height;
+	}
+
 	calculateHeight() {
 		return this.data.length;
 	}
@@ -307,6 +321,15 @@ export class Grid<T> {
 			coord.y >= 0 &&
 			coord.y < this.height
 		);
+	}
+
+	equals(other: Grid<T>) {
+		if (this.width !== other.width) return false;
+		if (this.height !== other.height) return false;
+		if (JSON.stringify(this.data) !== JSON.stringify(other.data)) {
+			return false;
+		}
+		return true;
 	}
 
 	get(coord: Coord): T | undefined {
@@ -577,6 +600,35 @@ export class Grid<T> {
 			out.set({ x, y }, this.get(c)!);
 		}
 		return out;
+	}
+
+	flip(direction: 'horizontally' | 'vertically') {
+		const out = this.copy();
+		if (direction === 'horizontally') {
+			for (let y = 0; y < out.height; y++) {
+				out.data[y].reverse();
+			}
+		} else {
+			out.data.reverse();
+		}
+		return out;
+	}
+
+	findAllUniquePermutations() {
+		const perms: Grid<T>[] = [];
+		
+		let lastPerm = this.copy();
+		perms.push(lastPerm);
+		perms.push(lastPerm.flip('horizontally'));
+
+		for (let i = 0; i < 3; i++) {
+			const perm = lastPerm.rotateLeft();
+			perms.push(perm);
+			perms.push(perm.flip('horizontally'));
+			lastPerm = perm;
+		}
+
+		return unique(perms, (a, b) => a.equals(b));
 	}
 
 	toString(map: (item: T | undefined) => string = String) {
