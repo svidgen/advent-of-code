@@ -1250,7 +1250,7 @@ export function reduce(equations: Equation[]): Equation[] | 'unsolvable' {
 		];
 	}
 
-	// make positive
+	// make positive for my sanity in debug logging.
 	for (const row of eq) {
 		if (row.y < 0) {
 			row.y = row.y * -1;
@@ -1382,7 +1382,7 @@ export function bestPositiveIntSolution(equations: Equation[]): Solution | undef
 	let score = Number.MAX_SAFE_INTEGER;
 	let bestSolution: Solution | undefined;
 	const maxY = Math.max(
-		...reduced.map(eq => Math.abs(eq.y) / Math.min(...eq.x.filter(Boolean).map(Math.abs)))
+		...equations.map(eq => Math.abs(eq.y) / Math.min(...eq.x.filter(Boolean).map(Math.abs)))
 	) + 1;
 
 	console.log('linear system')
@@ -1406,19 +1406,23 @@ export function bestPositiveIntSolution(equations: Equation[]): Solution | undef
 		let solution = solveLinearSystem(permutation);
 		if (solution === 'unsolvable') continue;
 		const isSolution = isSolutionToLinearSystem(equations, solution);
-		// console.log(`solution`, solution, isSolution);
+
+		if (reduced[6]?.y === 2560) {
+			console.log(`solution`, solution, isSolution);
+		}
 
 		let solutionScore = sum(solution);
 		let isIntSolution = solution.every(v => v - Math.floor(v) < 0.0000001 && v >= 0);
 
-		if (isSolution && !isIntSolution) {
-			const asInts = solution.map(x => Math.round(x));
-			if (isSolutionToLinearSystem(equations, asInts)) {
-				solution = asInts;
-				solutionScore = sum(asInts);
-				isIntSolution = true;
-			}
-		}
+		// if (isSolution && !isIntSolution) {
+		// 	const asInts = solution.map(x => Math.round(x));
+		// 	isIntSolution = solution.every(v => v >= 0);
+		// 	if (isIntSolution && isSolutionToLinearSystem(equations, asInts)) {
+		// 		solution = asInts;
+		// 		solutionScore = sum(asInts);
+		// 		isIntSolution = true;
+		// 	}
+		// }
 
 		if (isIntSolution && solutionScore < score) {
 			score = solutionScore;
@@ -1433,6 +1437,8 @@ export function bestPositiveIntSolution(equations: Equation[]): Solution | undef
 		console.table(reduced.map(equationTableRow));
 		throw new Error('solver error')
 	}
+
+	// console.log(bestSolution);
 
 	return bestSolution;
 }
