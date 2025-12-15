@@ -1302,14 +1302,6 @@ export function isSolutionToLinearSystem(equations: Equation[], cx: number[]): b
 	return true;
 }
 
-export function partialLinearSystem(equations: Equation[], ci: number, cv: number): Equation[] {
-	return equations.map(eq => {
-		const y = eq.y - (eq.x[ci] * cv);
-		const x = [...eq.x.slice(0, ci), ...eq.x.slice(ci + 1)]
-		return { x, y };
-	});
-}
-
 function * counter(fieldCount: number, limit: number = 100) {
 	const fields = Array(fieldCount).fill(0);
 	while (true) {
