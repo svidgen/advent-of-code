@@ -62,20 +62,6 @@ class Machine {
 			return eq;
 		});
 
-		// console.log(equations, positiveIntSolutions(equations));
-
-		// console.log('given');
-		// console.table(equations.map(equationTableRow));
-
-		// const reduced = (reduce(equations) as any);
-		// const frees = freeVariables(reduced);
-
-		// console.log('reduced');
-		// console.table(reduced.map(equationTableRow));
-		// console.log(frees);
-
-		// return equations;
-
 		// and then we just pick best positive integer solution.
 		const result = sum(bestPositiveIntSolution(equations)!);
 		console.log(`solved one ... ${result}`);
@@ -104,13 +90,6 @@ function part2() {
 	const solutions = machines.map(m => m.solveJoltages());
 	return sum(solutions);
 }
-
-const eq: Equation[] = [
-	{ x: [0, 1, 1], y: 5},
-	{ x: [0, 1, 0], y: 3},
-];
-// console.log(bestPositiveIntSolution(eq));
-// console.log(bestPositiveIntSolution([eq], eq => sum(eq)));
 
 console.log('part 1', part1());
 console.log('part 2', part2());

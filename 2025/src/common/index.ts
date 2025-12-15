@@ -1250,18 +1250,6 @@ export function reduce(equations: Equation[]): Equation[] | 'unsolvable' {
 		];
 	}
 
-	// make positive for my sanity in debug logging.
-	for (const row of eq) {
-		if (row.y < 0) {
-			row.y = row.y * -1;
-			for (let i = 0; i < row.x.length; i++) {
-				row.x[i] = row.x[i] === 0 ? 0 : row.x[i] * -1;
-			}
-		}
-	}
-
-	// console.table(eq.map(equationTableRow));
-
 	return eq.filter(eq => !eq.x.every(v => v === 0)).sort(byFirstPopulated);
 }
 
@@ -1282,26 +1270,12 @@ export function solveLinearSystem(equations: Equation[]): Solution | "unsolvable
 	if (equations.some(eq => Number.isNaN(eq.y) || !Number.isFinite(eq.y))) return 'unsolvable';
 	if (equations.length !== equations[0].x.length) return 'unsolvable';
 
-	// console.log('solving');
-	// console.table(equations.map(equationTableRow));
-
 	const eq = reduce(equations);
 	if (eq === 'unsolvable') return eq;
-
-	// console.log('reduced');
-	// console.table(eq.map(equationTableRow));
 
 	const solution: number[] = [];
 
 	for (let r = eq.length - 1; r >= 0; r--) {
-		// console.log('pre-solving', r, eq[r]);
-		// const cx = eq[r].x[r];
-		// const solve = eq[r].y / cx;
-		// solution.push(solve);
-
-		// eq[r].y = solve;
-		// eq[r].x[r] = 1;
-
 		eq[r].y = eq[r].y / eq[r].x[r];
 		eq[r].x[r] = 1;
 		solution.push(eq[r].y);
@@ -1315,13 +1289,7 @@ export function solveLinearSystem(equations: Equation[]): Solution | "unsolvable
 			}
 			eq[j].y = eq[j].y * eq[r].x[r] - eq[r].y * coeff;
 		}
-
-		// console.log('solved', r, { cx, solve }, eq[r]);
-		// console.table(eq.map(equationTableRow));
 	}
-
-	// console.log('solving reduced')
-	// console.table(eq.map(equationTableRow));
 
 	if (solution.some(s => Number.isNaN(s))) return 'unsolvable';
 	return solution.reverse();
@@ -1372,8 +1340,8 @@ export function bestPositiveIntSolution(equations: Equation[]): Solution | undef
 	const free = freeVariables(reduced);
 
 	if (free.length === 0) {
-		console.log('solving with no frees');
-		console.table(reduced.map(equationTableRow));
+		// console.log('no free varaibles; looking for single solution');
+		// console.table(reduced.map(equationTableRow));
 		const solution = solveLinearSystem(reduced);
 		if (solution === 'unsolvable') throw new Error('Unsolvable.');
 		return solution;
@@ -1385,13 +1353,13 @@ export function bestPositiveIntSolution(equations: Equation[]): Solution | undef
 		...equations.map(eq => Math.abs(eq.y) / Math.min(...eq.x.filter(Boolean).map(Math.abs)))
 	) + 1;
 
-	console.log('linear system')
-	console.table(reduced.map(equationTableRow));
-	console.table({
-		free: free.length,
-		maxY,
-		permutations: maxY ** free.length
-	});
+	// console.log('multiple solutions')
+	// console.table(reduced.map(equationTableRow));
+	// console.table({
+	// 	free: free.length,
+	// 	maxY,
+	// 	permutations: maxY ** free.length
+	// });
 
 	for (const choices of counter(free.length, maxY)) {
 		if (sum(choices) > score) continue;
@@ -1400,57 +1368,30 @@ export function bestPositiveIntSolution(equations: Equation[]): Solution | undef
 		for (const [idx, slot] of free.entries()) {
 			permutation.push(makeEquation(width, slot, choices[idx]))
 		}
-		// console.log('permutation');
-		// console.table(permutation.map(equationTableRow));
 
 		let solution = solveLinearSystem(permutation);
 		if (solution === 'unsolvable') continue;
 		const isSolution = isSolutionToLinearSystem(equations, solution);
 
-		if (reduced[6]?.y === 2560) {
-			console.log(`solution`, solution, isSolution);
-		}
+		const solutionScore = sum(solution);
+		const isIntSolution = solution.every(v => v - Math.floor(v) < 0.0000001 && v >= 0);
 
-		let solutionScore = sum(solution);
-		let isIntSolution = solution.every(v => v - Math.floor(v) < 0.0000001 && v >= 0);
-
-		// if (isSolution && !isIntSolution) {
-		// 	const asInts = solution.map(x => Math.round(x));
-		// 	isIntSolution = solution.every(v => v >= 0);
-		// 	if (isIntSolution && isSolutionToLinearSystem(equations, asInts)) {
-		// 		solution = asInts;
-		// 		solutionScore = sum(asInts);
-		// 		isIntSolution = true;
-		// 	}
-		// }
-
-		if (isIntSolution && solutionScore < score) {
+		if (isSolution && isIntSolution && solutionScore < score) {
 			score = solutionScore;
 			bestSolution = solution;
 		}
 	}
 
-	if (!bestSolution) {
-		console.log('original');
-		console.table(equations.map(equationTableRow));
-		console.log('reduced');
-		console.table(reduced.map(equationTableRow));
-		throw new Error('solver error')
-	}
-
-	// console.log(bestSolution);
+	// if (!bestSolution) {
+	// 	console.log('original');
+	// 	console.table(equations.map(equationTableRow));
+	// 	console.log('reduced');
+	// 	console.table(reduced.map(equationTableRow));
+	// 	throw new Error('solver error')
+	// }
 
 	return bestSolution;
 }
-
-// export function bestPositiveIntSolution(
-// 	equations: Equation[],
-// 	score: (eq: Solution) => number
-// ): Solution | undefined {
-// 	const solutions = positiveIntSolutions(equations);
-// 	solutions.sort((a, b) => score(a) - score(b));
-// 	return solutions.shift();
-// }
 
 export class InclusiveRange {
 	constructor(
