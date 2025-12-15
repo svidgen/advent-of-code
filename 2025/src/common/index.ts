@@ -1295,22 +1295,25 @@ export function solveLinearSystem(equations: Equation[]): Solution | "unsolvable
 
 	for (let r = eq.length - 1; r >= 0; r--) {
 		// console.log('pre-solving', r, eq[r]);
+		// const cx = eq[r].x[r];
+		// const solve = eq[r].y / cx;
+		// solution.push(solve);
 
-		const cx = eq[r].x[r];
-		const solve = eq[r].y / cx;
-		solution.push(solve);
+		// eq[r].y = solve;
+		// eq[r].x[r] = 1;
 
-		// console.log('solving', r, { cx, solve }, eq[r]);
+		eq[r].y = eq[r].y / eq[r].x[r];
+		eq[r].x[r] = 1;
+		solution.push(eq[r].y);
 
 		// propagate to all other rows
-		for (let j = 0; j < eq.length; j++) {
-			if (j === r) continue;
+		for (let j = 0; j < r; j++) {
 			const coeff = eq[j].x[r];
-			
+			if (coeff === 0) continue;
 			for (let xi = 0; xi < eq[j].x.length; xi++) {
-				eq[j].x[xi] = eq[j].x[xi] * cx - eq[r].x[xi] * coeff;
+				eq[j].x[xi] = eq[j].x[xi] * eq[r].x[r] - eq[r].x[xi] * coeff;
 			}
-			eq[j].y = eq[j].y * cx - eq[r].y * coeff;
+			eq[j].y = eq[j].y * eq[r].x[r] - eq[r].y * coeff;
 		}
 
 		// console.log('solved', r, { cx, solve }, eq[r]);
@@ -1369,6 +1372,8 @@ export function bestPositiveIntSolution(equations: Equation[]): Solution | undef
 	const free = freeVariables(reduced);
 
 	if (free.length === 0) {
+		console.log('solving with no frees');
+		console.table(reduced.map(equationTableRow));
 		const solution = solveLinearSystem(reduced);
 		if (solution === 'unsolvable') throw new Error('Unsolvable.');
 		return solution;
@@ -1398,12 +1403,23 @@ export function bestPositiveIntSolution(equations: Equation[]): Solution | undef
 		// console.log('permutation');
 		// console.table(permutation.map(equationTableRow));
 
-		const solution = solveLinearSystem(permutation);
-		// console.log(`solution`, solution);
-
+		let solution = solveLinearSystem(permutation);
 		if (solution === 'unsolvable') continue;
-		const solutionScore = sum(solution);
-		const isIntSolution = solution.every(v => Math.floor(v) === v && v >= 0);
+		const isSolution = isSolutionToLinearSystem(equations, solution);
+		// console.log(`solution`, solution, isSolution);
+
+		let solutionScore = sum(solution);
+		let isIntSolution = solution.every(v => v - Math.floor(v) < 0.0000001 && v >= 0);
+
+		if (isSolution && !isIntSolution) {
+			const asInts = solution.map(x => Math.round(x));
+			if (isSolutionToLinearSystem(equations, asInts)) {
+				solution = asInts;
+				solutionScore = sum(asInts);
+				isIntSolution = true;
+			}
+		}
+
 		if (isIntSolution && solutionScore < score) {
 			score = solutionScore;
 			bestSolution = solution;
