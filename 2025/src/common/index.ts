@@ -1,3 +1,4 @@
+import { SlowBuffer } from 'buffer';
 import * as fs from 'fs';
 import * as process from 'process';
 
@@ -1193,65 +1194,134 @@ export type Equation = {
 
 export type Solution = number[];
 
-/**
- * Solves a system of linear equations.
- */
-export function solveLinearSystem(equations: Equation[]): Solution | "multiple" | "unsolvable" {
+export function equationTableRow(eq: Equation) {
+	const out = {} as Record<string, number>;
+	for (let i = 0; i < eq.x.length; i++) {
+		out[`x${i}`] = Math.floor(eq.x[i] * 100) / 100;
+	}
+	out.y = Math.floor(eq.y * 100) / 100;
+	return out;
+}
+
+export function reduce(equations: Equation[]): Equation[] | 'unsolvable' {
 	if (equations.length === 0 || equations[0].x.length === 0) return 'unsolvable';
 	if (equations.some(eq => Number.isNaN(eq.y) || !Number.isFinite(eq.y))) return 'unsolvable';
-	if (equations[0].x.length !== equations.length) return 'multiple';
 
-	const eq = equations.map(e => ({
+	const firstPopulatedIndex = (items: number[]) => {
+		const idx = items.findIndex(v => !!v);
+		return idx >= 0 ? idx : Number.MAX_SAFE_INTEGER
+	};
+
+	const isPopulated = (eq: Equation) => !eq.x.every(v => v === 0);
+
+	const byFirstPopulated = (a: Equation, b: Equation) => {
+		return firstPopulatedIndex(a.x) - firstPopulatedIndex(b.x);
+	}
+
+	let eq = equations.map(e => ({
 		y: e.y,
 		x: [...e.x]
-	}));
+	})).sort(byFirstPopulated);
 
-	for (let i = 0; i < eq.length; i++) {
-		// set the coefficient at the diagonal to 1
-		let cx = eq[i].x[i];
-		
-		// if cx is 0, we want to try to find an row to add to this one
-		// so we can use it as our `1` value-row. we'll look only at rows
-		// below this one so we don't populate already zerod out columns.
-		if (cx === 0) {
-			let foundOne = false;
-			for (let ri = cx + 1; ri < eq.length; ri++) {
-				if (eq[ri].x[i] > 0) {
-					foundOne = true;
-					for (let xi = 0; xi < eq.length; xi++) {
-						eq[i].x[xi] += eq[ri].x[xi];
-					}
-					eq[i].y += eq[ri].y;
-					break;
-				}
-			}
-			if (!foundOne) return 'multiple';
-			cx = eq[i].x[i];
+	for (let r = 0; r < eq.length; r++) {
+		let c = r;
+		while (c < eq[r].x.length) {
+			if (eq[r].x[c] !== 0) break;
+			c++;
 		}
+		const cx = eq[r].x[c];
 
-		// now, divide everything in the row by the value in the column value to make it 1.
-		for (let xi = 0; xi < eq.length; xi++) {
-			eq[i].x[xi] = eq[i].x[xi] / cx;
-		}
-		eq[i].y = eq[i].y / cx;
+		if (!cx) continue;
 
-		// propagate to other rows, setting all other coefficients at `i` to 0
-		for (let j = 0; j < eq.length; j++) {
-			if (i === j) continue;
-			const coeff = eq[j].x[i];
+		// propagate to all following rows, setting all other coefficients at `i` to 0
+		for (let j = r + 1; j < eq.length; j++) {
+			const coeff = eq[j].x[c];
+			if (coeff === 0) continue;
 			
-			for (let xi = 0; xi < eq.length; xi++) {
-				eq[j].x[xi] = eq[j].x[xi] - eq[i].x[xi] * coeff;
+			for (let xi = 0; xi < eq[j].x.length; xi++) {
+				eq[j].x[xi] = eq[j].x[xi] * cx - eq[r].x[xi] * coeff;
 			}
-			eq[j].y = eq[j].y - eq[i].y * coeff;
+			eq[j].y = eq[j].y * cx - eq[r].y * coeff;
+		}
+
+		eq = [
+			...eq.slice(0, r + 1),
+			...eq.slice(r + 1).filter(isPopulated).sort(byFirstPopulated)
+		];
+	}
+
+	// make positive
+	for (const row of eq) {
+		if (row.y < 0) {
+			row.y = row.y * -1;
+			for (let i = 0; i < row.x.length; i++) {
+				row.x[i] = row.x[i] === 0 ? 0 : row.x[i] * -1;
+			}
 		}
 	}
 
-	const floatSolution = eq.map(e => e.y);
-	if (floatSolution.some(s => Number.isNaN(s))) return 'multiple';
+	// console.table(eq.map(equationTableRow));
 
-	const intSolution = floatSolution.map(c => Math.round(c));
-	return isSolutionToLinearSystem(equations, intSolution) ? intSolution : floatSolution;
+	return eq.filter(eq => !eq.x.every(v => v === 0)).sort(byFirstPopulated);
+}
+
+export function freeVariables(equations: Equation[]): number[] {
+	const freeVariables = new Set(
+		Array(equations[0].x.length).fill(0).map((_, idx) => idx)
+	);
+	for (let eq of equations) {
+		const firstNonZeroIndex = eq.x.findIndex(v => v !== 0);
+		freeVariables.delete(firstNonZeroIndex);
+	}
+	return Array.from(freeVariables);
+}
+
+
+export function solveLinearSystem(equations: Equation[]): Solution | "unsolvable" {
+	if (equations.length === 0 || equations[0].x.length === 0) return 'unsolvable';
+	if (equations.some(eq => Number.isNaN(eq.y) || !Number.isFinite(eq.y))) return 'unsolvable';
+	if (equations.length !== equations[0].x.length) return 'unsolvable';
+
+	// console.log('solving');
+	// console.table(equations.map(equationTableRow));
+
+	const eq = reduce(equations);
+	if (eq === 'unsolvable') return eq;
+
+	// console.log('reduced');
+	// console.table(eq.map(equationTableRow));
+
+	const solution: number[] = [];
+
+	for (let r = eq.length - 1; r >= 0; r--) {
+		// console.log('pre-solving', r, eq[r]);
+
+		const cx = eq[r].x[r];
+		const solve = eq[r].y / cx;
+		solution.push(solve);
+
+		// console.log('solving', r, { cx, solve }, eq[r]);
+
+		// propagate to all other rows
+		for (let j = 0; j < eq.length; j++) {
+			if (j === r) continue;
+			const coeff = eq[j].x[r];
+			
+			for (let xi = 0; xi < eq[j].x.length; xi++) {
+				eq[j].x[xi] = eq[j].x[xi] * cx - eq[r].x[xi] * coeff;
+			}
+			eq[j].y = eq[j].y * cx - eq[r].y * coeff;
+		}
+
+		// console.log('solved', r, { cx, solve }, eq[r]);
+		// console.table(eq.map(equationTableRow));
+	}
+
+	// console.log('solving reduced')
+	// console.table(eq.map(equationTableRow));
+
+	if (solution.some(s => Number.isNaN(s))) return 'unsolvable';
+	return solution.reverse();
 }
 
 export function isSolutionToLinearSystem(equations: Equation[], cx: number[]): boolean {
@@ -1261,70 +1331,94 @@ export function isSolutionToLinearSystem(equations: Equation[], cx: number[]): b
 	return true;
 }
 
-export function partialLinearSystem(equations: Equation[], c0: number): Equation[] {
+export function partialLinearSystem(equations: Equation[], ci: number, cv: number): Equation[] {
 	return equations.map(eq => {
-		const [x0, ...x] = eq.x;
-		const y = eq.y - (x0 * c0);
+		const y = eq.y - (eq.x[ci] * cv);
+		const x = [...eq.x.slice(0, ci), ...eq.x.slice(ci + 1)]
 		return { x, y };
 	});
 }
 
-export function bestPositiveIntSolution(equations: Equation[], budget: number = Number.MAX_SAFE_INTEGER): Solution | undefined {
-	const immediateSolution = solveLinearSystem(equations);
-
-	// console.log({ immediateSolution });
-
-	// if there is no solution, we can stop looking!
-	if (immediateSolution === 'unsolvable') return;
-	
-	// if we have a single solution, we only care about it if the
-	// coefficients are all positive integers.
-	if (immediateSolution !== 'multiple') {
-		if (immediateSolution.every(c => c >= 0 && Math.floor(c) === c)) {
-			return immediateSolution;
-		} else {
-			return;
-		}
-	}
-
-	let solution: Solution | undefined = undefined;
-	let score = Math.min(budget, Math.max(...equations.map(eq => eq.y)) * 2);
-
-	if (equations[0].x.length < equations.length) {
-		for (let i = 0; i < equations.length; i++) {
-			const permutation = equations.toSpliced(i, 1);
-			const candidate = bestPositiveIntSolution(permutation, score);
-			const candidateScore = candidate ? sum(candidate) : Number.MAX_SAFE_INTEGER;
-			if (candidate && isSolutionToLinearSystem(equations, candidate) && candidateScore < score) {
-				// console.dir({ exit: 'a', equations, candidate, candidateScore, score }, { depth: null });
-				score = candidateScore;
-				solution = candidate;
+function * counter(fieldCount: number, limit: number = 100) {
+	const fields = Array(fieldCount).fill(0);
+	while (true) {
+		yield [...fields];
+		fields[0]++;
+		for (let i = 0; i < fieldCount - 1; i++) {
+			if (fields[i] == limit) {
+				fields[i] = 0;
+				fields[i + 1]++;
 			}
 		}
+		if (fields[fieldCount - 1] === limit) return;
+	}
+}
+
+function makeEquation(length: number, index: number, value: number): Equation {
+	const x = Array(length).fill(0);
+	x[index] = 1;
+	return { y: value, x };
+}
+
+export function bestPositiveIntSolution(equations: Equation[]): Solution | undefined {
+	const reduced = reduce(equations);
+	if (reduced === 'unsolvable') throw new Error('Unsolvable.');
+
+	const width = reduced[0].x.length
+
+	const free = freeVariables(reduced);
+
+	if (free.length === 0) {
+		const solution = solveLinearSystem(reduced);
+		if (solution === 'unsolvable') throw new Error('Unsolvable.');
+		return solution;
 	}
 
-	if (solution) return solution;
+	let score = Number.MAX_SAFE_INTEGER;
+	let bestSolution: Solution | undefined;
+	const maxY = Math.max(
+		...reduced.map(eq => Math.abs(eq.y) / Math.min(...eq.x.filter(Boolean).map(Math.abs)))
+	) + 1;
 
-	for (let c0 = 0; c0 <= score; c0++) {
-		const partial = partialLinearSystem(equations, c0);
-		if (partial.some(eq => eq.y < 0)) continue;
-		const candidateSubSolution = bestPositiveIntSolution(partial, score - c0);
-		if (candidateSubSolution) {
-			const candidate = [c0, ...candidateSubSolution];
-			const candidateScore = sum(candidate);
-			if (candidateScore < score && isSolutionToLinearSystem(equations, candidate)) {
-				// console.dir({ exit: 'b', equations, candidate, candidateScore, score }, { depth: null });
-				solution = candidate;
-				score = candidateScore;
-			}
+	console.log('linear system')
+	console.table(reduced.map(equationTableRow));
+	console.table({
+		free: free.length,
+		maxY,
+		permutations: maxY ** free.length
+	});
+
+	for (const choices of counter(free.length, maxY)) {
+		if (sum(choices) > score) continue;
+
+		const permutation = [...reduced];
+		for (const [idx, slot] of free.entries()) {
+			permutation.push(makeEquation(width, slot, choices[idx]))
+		}
+		// console.log('permutation');
+		// console.table(permutation.map(equationTableRow));
+
+		const solution = solveLinearSystem(permutation);
+		// console.log(`solution`, solution);
+
+		if (solution === 'unsolvable') continue;
+		const solutionScore = sum(solution);
+		const isIntSolution = solution.every(v => Math.floor(v) === v && v >= 0);
+		if (isIntSolution && solutionScore < score) {
+			score = solutionScore;
+			bestSolution = solution;
 		}
 	}
 
-	// if (solution === undefined) {
-	// 	console.dir({ NONE: true, equations, score, immediateSolution }, { depth: null });
-	// }
+	if (!bestSolution) {
+		console.log('original');
+		console.table(equations.map(equationTableRow));
+		console.log('reduced');
+		console.table(reduced.map(equationTableRow));
+		throw new Error('solver error')
+	}
 
-	return solution;
+	return bestSolution;
 }
 
 // export function bestPositiveIntSolution(

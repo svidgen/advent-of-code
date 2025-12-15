@@ -4,7 +4,11 @@ import {
 	bestPositiveIntSolution,
 	Equation,
 	solveLinearSystem,
-	findShortestPath
+	findShortestPath,
+	reduce,
+	equationTableRow,
+	Edge,
+	freeVariables,
 } from '../common/index.js';
 
 class Machine {
@@ -60,6 +64,16 @@ class Machine {
 
 		// console.log(equations, positiveIntSolutions(equations));
 
+		// console.log('given');
+		// console.table(equations.map(equationTableRow));
+
+		// const reduced = (reduce(equations) as any);
+		// const frees = freeVariables(reduced);
+
+		// console.log('reduced');
+		// console.table(reduced.map(equationTableRow));
+		// console.log(frees);
+
 		// return equations;
 
 		// and then we just pick best positive integer solution.
@@ -87,23 +101,12 @@ function part1() {
 }
 
 function part2() {
-	// console.dir(
-	// 	machines
-	// 		.map(m => ({
-	// 			...m,
-	// 			diff: m.joltageTargets.length - m.buttons.length
-	// 		}))
-	// 		.filter(m => m.diff === -3)
-	// 		.sort((a, b) => a.diff - b.diff),
-	// 	{ depth: null }
-	// );
 	const solutions = machines.map(m => m.solveJoltages());
-	// console.dir(solutions, { depth: null });
 	return sum(solutions);
 }
 
 const eq: Equation[] = [
-	{ x: [0, 0, 1], y: 5},
+	{ x: [0, 1, 1], y: 5},
 	{ x: [0, 1, 0], y: 3},
 ];
 // console.log(bestPositiveIntSolution(eq));
