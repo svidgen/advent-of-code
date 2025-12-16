@@ -1203,25 +1203,25 @@ export function equationTableRow(eq: Equation) {
 	return out;
 }
 
+const firstPopulatedIndex = (items: number[]) => {
+	const idx = items.findIndex(v => !!v);
+	return idx >= 0 ? idx : Number.MAX_SAFE_INTEGER
+};
+
+const isPopulated = (eq: Equation) => !eq.x.every(v => v === 0);
+
+const byFirstPopulatedIndex = (a: Equation, b: Equation) => {
+	return firstPopulatedIndex(a.x) - firstPopulatedIndex(b.x);
+}
+
 export function reduce(equations: Equation[]): Equation[] | 'unsolvable' {
 	if (equations.length === 0 || equations[0].x.length === 0) return 'unsolvable';
 	if (equations.some(eq => Number.isNaN(eq.y) || !Number.isFinite(eq.y))) return 'unsolvable';
 
-	const firstPopulatedIndex = (items: number[]) => {
-		const idx = items.findIndex(v => !!v);
-		return idx >= 0 ? idx : Number.MAX_SAFE_INTEGER
-	};
-
-	const isPopulated = (eq: Equation) => !eq.x.every(v => v === 0);
-
-	const byFirstPopulated = (a: Equation, b: Equation) => {
-		return firstPopulatedIndex(a.x) - firstPopulatedIndex(b.x);
-	}
-
 	let eq = equations.map(e => ({
 		y: e.y,
 		x: [...e.x]
-	})).sort(byFirstPopulated);
+	})).sort(byFirstPopulatedIndex);
 
 	for (let r = 0; r < eq.length; r++) {
 		let c = r;
@@ -1246,11 +1246,11 @@ export function reduce(equations: Equation[]): Equation[] | 'unsolvable' {
 
 		eq = [
 			...eq.slice(0, r + 1),
-			...eq.slice(r + 1).filter(isPopulated).sort(byFirstPopulated)
+			...eq.slice(r + 1).filter(isPopulated).sort(byFirstPopulatedIndex)
 		];
 	}
 
-	return eq.filter(eq => !eq.x.every(v => v === 0)).sort(byFirstPopulated);
+	return eq.filter(eq => !eq.x.every(v => v === 0)).sort(byFirstPopulatedIndex);
 }
 
 export function freeVariables(equations: Equation[]): number[] {
@@ -1295,6 +1295,19 @@ export function solveLinearSystem(equations: Equation[]): Solution | "unsolvable
 	return solution.reverse();
 }
 
+export function solveAlreadyReducedLinearSystem(eq: Equation[]): Solution | "unsolvable" {
+	const solution: number[] = Array(eq.length).fill(0);
+	for (let r = eq.length - 1; r >= 0; r--) {
+		let y = eq[r].y;
+		for (let c = r + 1; c < eq.length; c++) {
+			y = y - eq[r].x[c] * solution[c];
+		}
+		solution[r] = y / eq[r].x[r];
+	}
+	if (solution.some(s => Number.isNaN(s))) return 'unsolvable';
+	return solution;
+}
+
 export function isSolutionToLinearSystem(equations: Equation[], cx: number[]): boolean {
 	for (const eq of equations) {
 		if (sum(eq.x.map((x, i) => x * cx[i])) !== eq.y) return false;
@@ -1334,7 +1347,8 @@ export function bestPositiveIntSolution(equations: Equation[]): Solution | undef
 	if (free.length === 0) {
 		// console.log('no free varaibles; looking for single solution');
 		// console.table(reduced.map(equationTableRow));
-		const solution = solveLinearSystem(reduced);
+		// const solution = solveLinearSystem(reduced);
+		const solution = solveAlreadyReducedLinearSystem(reduced);
 		if (solution === 'unsolvable') throw new Error('Unsolvable.');
 		return solution;
 	}
@@ -1361,7 +1375,7 @@ export function bestPositiveIntSolution(equations: Equation[]): Solution | undef
 			permutation.push(makeEquation(width, slot, choices[idx]))
 		}
 
-		let solution = solveLinearSystem(permutation);
+		let solution = solveAlreadyReducedLinearSystem(permutation.sort(byFirstPopulatedIndex));
 		if (solution === 'unsolvable') continue;
 		const isSolution = isSolutionToLinearSystem(equations, solution);
 
